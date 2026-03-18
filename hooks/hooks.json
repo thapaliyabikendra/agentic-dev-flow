@@ -1,0 +1,16 @@
+{
+  "hooks": [
+    {
+      "event": "PreToolUse",
+      "tools": ["Write", "Edit"],
+      "description": "Warn before writing files when no plan exists in context",
+      "script": "echo '[agentic-dev-flow] Tip: Run /agentic-dev-flow:task-planner first to generate a plan before making changes.'"
+    },
+    {
+      "event": "PostToolUse",
+      "tools": ["Agent"],
+      "description": "Log when a sub-agent completes",
+      "script": "echo '[agentic-dev-flow] Sub-agent completed. Review the plan before proceeding to implementation.'"
+    }
+  ]
+}
