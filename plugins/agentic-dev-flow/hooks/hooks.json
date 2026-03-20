@@ -1,0 +1,26 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '[agentic-dev-flow] Tip: Run /agentic-dev-flow:task-planner first to generate a plan before making changes.'"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '[agentic-dev-flow] Sub-agent completed. Review the plan before proceeding to implementation.'"
+          }
+        ]
+      }
+    ]
+  }
+}

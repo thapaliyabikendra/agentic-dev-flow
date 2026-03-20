@@ -1,0 +1,33 @@
+{
+  "name": "agentic-dev-flow",
+  "version": "1.0.0",
+  "description": "Agentic development workflow plugin with sub-agents and skills for intelligent task planning and breakdown.",
+  "keywords": [
+    "claude-code", "claude-code-plugin", "task-planning",
+    "project-management", "productivity", "developer-tools",
+    "agentic", "ai-assistant"
+  ],
+  "author": {
+    "name": "Bikendra Thapaliya",
+    "email": "thapaliyabikendra@users.noreply.github.com",
+    "url": "https://github.com/thapaliyabikendra"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/thapaliyabikendra/agentic-dev-flow",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thapaliyabikendra/agentic-dev-flow.git"
+  },
+  "bugs": {
+    "url": "https://github.com/thapaliyabikendra/agentic-dev-flow/issues"
+  },
+  "files": [
+    ".claude-plugin/",
+    "plugins/",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

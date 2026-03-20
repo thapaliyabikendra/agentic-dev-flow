@@ -1,0 +1,17 @@
+.env
+.env.*
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+.git/
+.gitignore
+.gitattributes
+.github/
+coverage/
+docs/
+tmp/
+temp/
+*.tmp
+node_modules/
+.serena/

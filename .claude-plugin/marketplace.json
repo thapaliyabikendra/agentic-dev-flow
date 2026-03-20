@@ -1,0 +1,38 @@
+{
+  "name": "agentic-dev-flow",
+  "owner": {
+    "name": "Bikendra Thapaliya",
+    "email": "thapaliyabikendra@gmail.com"
+  },
+  "homepage": "https://github.com/thapaliyabikendra/agentic-dev-flow",
+  "repository": "https://github.com/thapaliyabikendra/agentic-dev-flow",
+  "license": "MIT",
+  "metadata": {
+    "version": "1.0.0",
+    "description": "Agentic development workflow plugins for intelligent task planning, breakdown, and dependency mapping."
+  },
+  "plugins": [
+    {
+      "name": "agentic-dev-flow",
+      "source": "./plugins/agentic-dev-flow",
+      "description": "Agentic development workflow plugin with sub-agents and skills for intelligent task planning and breakdown.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Bikendra Thapaliya",
+        "email": "thapaliyabikendra@gmail.com"
+      },
+      "homepage": "https://github.com/thapaliyabikendra/agentic-dev-flow",
+      "repository": "https://github.com/thapaliyabikendra/agentic-dev-flow",
+      "license": "MIT",
+      "keywords": [
+        "task-planning",
+        "project-management",
+        "productivity",
+        "developer-tools",
+        "agentic",
+        "ai-assistant"
+      ],
+      "category": "productivity"
+    }
+  ]
+}

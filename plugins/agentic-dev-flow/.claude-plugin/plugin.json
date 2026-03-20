@@ -8,32 +8,16 @@
     "url": "https://github.com/thapaliyabikendra"
   },
   "homepage": "https://github.com/thapaliyabikendra/agentic-dev-flow",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/thapaliyabikendra/agentic-dev-flow.git"
-  },
+  "repository": "https://github.com/thapaliyabikendra/agentic-dev-flow",
   "license": "MIT",
   "keywords": [
     "claude-code",
-    "plugin",
+    "claude-code-plugin",
     "task-planning",
     "project-management",
     "productivity",
     "developer-tools",
     "agentic",
     "ai-assistant"
-  ],
-  "skills": [
-    "task-planner",
-    "task-breakdown",
-    "dependency-mapper",
-    "feature-spec-to-user-stories",
-    "requirements-to-feature-spec",
-    "user-stories-to-tasks"
-  ],
-  "agents": [
-    "planner-orchestrator",
-    "task-breakdown-specialist",
-    "dependency-analyst"
   ]
 }

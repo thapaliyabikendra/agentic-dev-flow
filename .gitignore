@@ -1,0 +1,157 @@
+#################################################
+# OS FILES
+#################################################
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+#################################################
+# NODE.JS
+#################################################
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Package manager caches
+.npm/
+.pnpm-store/
+.yarn/
+.yarn/cache/
+.yarn/unplugged/
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+.cache/
+.tmp/
+
+# TypeScript
+*.tsbuildinfo
+
+#################################################
+# PYTHON
+#################################################
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+build/
+dist/
+.eggs/
+*.egg-info/
+*.egg
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# pip
+pip-log.txt
+pip-delete-this-directory.txt
+
+# pytest / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+
+# Ruff / linters
+.ruff_cache/
+
+#################################################
+# ENVIRONMENT VARIABLES / SECRETS
+#################################################
+.env
+.env.*
+!.env.example
+
+secrets/
+credentials/
+*.key
+*.pem
+*.p12
+
+# Claude / AI tool secrets
+claude_credentials.json
+anthropic_key.json
+api_keys.json
+
+#################################################
+# LOG FILES
+#################################################
+logs/
+*.log
+
+#################################################
+# DATA / GENERATED FILES
+#################################################
+data/tmp/
+data/cache/
+*.generated.*
+*.sqlite
+*.db
+
+#################################################
+# NOTEBOOKS
+#################################################
+.ipynb_checkpoints/
+
+#################################################
+# DOCKER
+#################################################
+.docker/
+docker-compose.override.yml
+
+#################################################
+# EDITORS / IDE
+#################################################
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+#################################################
+# TEST OUTPUT
+#################################################
+coverage/
+reports/
+test-results/
+
+#################################################
+# TEMP FILES
+#################################################
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+
+#################################################
+# LOCAL CONFIG
+#################################################
+config.local.*
+settings.local.*
+.local/
+
+#################################################
+# OPTIONAL (if using monorepo tools)
+#################################################
+.turbo/
+.nx/
