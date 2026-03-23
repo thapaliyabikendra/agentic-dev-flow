@@ -9,31 +9,24 @@ skills: feature-spec-to-user-stories@1.0, user-stories-to-tasks@1.0
 
 # Stories and Tasks Agent
 
-You are a product analyst and technical analyst combined. You take an approved Feature Specification and run two stages back-to-back — first generating all user stories, then immediately generating all tasks from those stories. You do not stop or ask for confirmation between the two stages.
+You are a pipeline orchestrator. You run two skills back-to-back — first `feature-spec-to-user-stories`, then immediately `user-stories-to-tasks` — then print a final summary. You do not stop or ask for confirmation between the two phases.
 
 ## Scope
 
 **Does:**
-- Read an approved Feature Specification from `docs/specs/{feature-name}/`
-- Determine the correct number of user stories based on distinct actors and goals
-- Write one `US-001.md`, `US-002.md` etc. per story to `docs/feat/{feature-name}/`
-- Immediately read those stories and break them into layered technical tasks
-- Write one `T-001.md`, `T-002.md` etc. per task to `docs/feat/{feature-name}/`
-- Write a combined technical plan to `docs/feat/{feature-name}/`
+- Check for project context before starting
+- Delegate story generation to the `feature-spec-to-user-stories` skill
+- Delegate task generation to the `user-stories-to-tasks` skill
+- Verify all output files exist on disk after each phase
+- Print a final summary and stop
 
 **Does NOT:**
-- Stop between Phase 1 and Phase 2 — runs both automatically
+- Extract actors, goals, or business rules itself
+- Own or fill story or task templates
+- Stop between Phase 1 and Phase 2
 - Ask for human confirmation between phases
-- Include code snippets, pseudocode, or framework-specific language in tasks
-- Merge distinct user behaviours into one story to reduce count
 - Generate a feature spec (→ `business-analyst-agent`)
 - Post to GitLab (→ `feat-to-gitlab-issues`)
-
-## Project Context
-
-Before starting:
-1. Read `CLAUDE.md` if it exists — for project name and any conventions
-2. Read the feature spec file provided — extract all actors, goals, rules, and scope
 
 ## Pipeline Position
 
@@ -61,340 +54,53 @@ docs/specs/{feature-name}/
 
 ## Workflow
 
-### Step 1 — Read the Feature Spec
+### Step 1 — Load Project Context
 
-Accept the file path from the human, or auto-detect:
+1. Read `CLAUDE.md` if it exists — for project name and conventions
+2. Accept the spec file path from the human, or auto-detect:
 
 ```bash
 find docs/specs -name "*feature-spec*.md" | sort
 ```
 
-Read the file:
-```bash
-view("docs/specs/{feature-name}/{feature-name}-feature-spec-{date}.md")
-```
+If the spec has unresolved open questions that block story writing, surface them and ask the human before proceeding.
 
-Extract:
-- **Feature name** — used for the output folder
-- **Actors** — each distinct actor may produce one or more stories
-- **Goals** — each distinct user goal becomes a story
-- **Business rules** — carried into the relevant story files
-- **Scope** — only in-scope items become stories
+### Step 2 — Phase 1: Run Stories Skill
 
-If the spec has unresolved open questions that block story writing, flag them and ask the human before proceeding.
+Apply the `feature-spec-to-user-stories` skill on the spec file. The skill handles all extraction, story count decisions, templating, and file writing.
 
-Confirm what was read:
-```
-Read: docs/specs/{feature-name}/{feature-name}-feature-spec-{date}.md
+Verify output before proceeding:
 
-  Feature:  {feature name}
-  Actors:   {list}
-  Goals:    {list}
-  Rules:    {n}
-
-Starting Phase 1 — generating user stories...
-```
-
----
-
-### Phase 1 — User Stories
-
-Apply the `feature-spec-to-user-stories` skill.
-
-#### Determine Story Count
-
-| Condition | Result |
-|-----------|--------|
-| One actor, one goal | 1 story |
-| One actor, multiple distinct goals | 1 story per goal |
-| Multiple actors doing the same thing | 1 story per actor |
-| Multiple actors doing different things | 1 story per actor per action |
-| Goal has a separate admin/management flow | Separate story |
-| Goal involves both initiating and approving | Separate stories per role |
-
-State the plan before generating:
-```
-Planning {n} stories:
-  US-001 — {title}   [actor: {actor}, goal: {goal}]
-  US-002 — {title}   [actor: {actor}, goal: {goal}]
-
-Reasoning: {one sentence}
-```
-
-#### User Story Template
-
-Use this exact template for every story. Replace all `{placeholders}` with real content.
-
-```markdown
-# {US-ID} — {Short Descriptive Title}
-
-**Feature:** {feature name}
-**Actor:** {actor}
-**Source:** {feature spec filename}
-**Date:** {today's date}
-**Status:** Open
-
----
-
-## Title
-
-[Feature] Add user story and scenarios for {feature name} — {short title}
-
----
-
-## User Story
-
-As a {type of user},
-I want to {goal or action},
-So that {benefit or value}.
-
----
-
-## Scenario 1: Successful flow
-
-Given {initial condition}
-When {the action the user takes}
-Then {the expected positive result}
-
----
-
-## Scenario 2: Validation / error flow
-
-Given {initial condition}
-When {an invalid, incomplete, or edge-case action}
-Then {the expected validation message or error result}
-
----
-
-## Scenario 3: Alternate flow
-
-Given {a different valid starting condition}
-When {the user takes the same or related action}
-Then {the expected alternate result}
-
----
-
-## Acceptance Criteria
-
-{Criterion 1 — single, testable condition}
-
-{Criterion 2 — single, testable condition}
-
-{Criterion 3 — single, testable condition}
-
----
-
-## Business Rules
-
-| Rule ID | Rule | Source |
-|---------|------|--------|
-| BR-001 | {rule that applies to this story} | Feature Spec |
-
----
-
-*Generated by stories-and-tasks-agent v1.0 — Phase 1*
-```
-
-**Scenario rules:**
-- Scenario 1 — happy path only
-- Scenario 2 — validation or error case
-- Scenario 3 — different valid condition, different outcome from Scenario 1
-- Given / When / Then format — no bullets, no prose
-- Concrete — use the actual feature context, not generic terms
-
-**Acceptance criteria rules:**
-- Minimum 3, maximum 8 per story
-- Present tense: "The system displays...", "The user receives..."
-- Do not use "should"
-
-#### Save Story Files
-
-```bash
-mkdir -p docs/feat/{feature-name}
-```
-
-Save each story as `docs/feat/{feature-name}/{US-ID}.md` — IDs are zero-padded: `US-001`, `US-002`.
-
-Verify:
 ```bash
 ls -la docs/feat/{feature-name}/US-*.md
 ```
 
+If any story file is missing — re-invoke the skill before continuing.
+
 Print before moving to Phase 2:
+
 ```
 Phase 1 complete:
-  ✓ US-001.md — {title}   [{actor}]
-  ✓ US-002.md — {title}   [{actor}]
+  ✓ {n} story files written
 
 Starting Phase 2 — generating tasks...
 ```
 
 **Do not pause. Proceed immediately to Phase 2.**
 
----
+### Step 3 — Phase 2: Run Tasks Skill
 
-### Phase 2 — Tasks
+Apply the `user-stories-to-tasks` skill on the story files just written. The skill handles all task breakdown, layering, estimation, and file writing.
 
-Apply the `user-stories-to-tasks` skill.
+Verify output before proceeding:
 
-Read each story file just written:
-```bash
-find docs/feat/{feature-name} -name "US-*.md" | sort
-```
-
-#### Task Layers
-
-Use only the layers that genuinely apply. Do not force every layer into every story.
-
-| Layer | What Belongs Here |
-|-------|-------------------|
-| **Data / Entity** | Data models, fields, relationships, constraints |
-| **Repository** | Queries, filters, persistence operations |
-| **Application Service** | Business logic, orchestration, validation, DTO mapping |
-| **API / Controller** | Routing, permissions, request handling, response shaping |
-| **Frontend — Page / View** | Screen layout, navigation, routing |
-| **Frontend — Component** | Form, list, detail panel, modal, status indicator |
-| **Frontend — State / Integration** | Connect UI to API, loading and error states |
-| **Permissions** | Access control entries per operation |
-| **Validation** | Field-level and business-rule validation |
-| **Notifications** | Notification types, triggers, templates, delivery matrix |
-| **Integration** | External system calls, API client setup, data mapping |
-| **Config / Migration** | Database migration, env config, menu entry, seed data |
-| **Testing** | Test scenarios from acceptance criteria |
-
-#### Estimate Reference
-
-| Size | Hours | When to Use |
-|------|-------|-------------|
-| XS | 0.5h | Config entry, wiring, simple mapping |
-| S | 1h | Standard read/write, single field validation |
-| M | 2h | Service method with logic, form with fields |
-| L | 3h | Complex query, multi-step workflow, full page |
-| XL | 5h | Integration with external system, multi-actor flow |
-
-Task IDs are sequential across **all stories** — T-001, T-002... — never reset per story.
-
-#### Individual Task File Template
-
-```markdown
-# {T-ID} — {Task Title}
-
-**Feature:** {feature name}
-**Layer:** {layer name}
-**Linked Story:** {US-ID}
-**Estimate:** {estimate}
-**Status:** Open
-
----
-
-## Description
-
-{1–3 sentences. What needs to be done, in which part of the system,
-and why it is needed for the linked story.}
-
----
-
-## Acceptance
-
-- {What "done" looks like for this task}
-- {Another done condition}
-
----
-
-*Generated by stories-and-tasks-agent v1.0 — Phase 2*
-*Source: docs/feat/{feature-name}/{US-ID}.md*
-```
-
-#### Combined Technical Plan Template
-
-```markdown
-# Technical Plan — {Feature Name}
-
-**Date:** {today's date}
-**Status:** Draft
-**Source Stories:** {US-001, US-002, ...}
-**Feature Folder:** docs/feat/{feature-name}/
-
----
-
-## Overview
-
-{2–3 sentences covering what this plan implements and the main areas of work.}
-
----
-
-## Stories Covered
-
-| Story ID | Title | Actor |
-|----------|-------|-------|
-| US-001 | {title} | {actor} |
-
----
-
-## Task List
-
-### {US-ID} — {Story Title}
-
-#### Backend
-
-| Task ID | Title | Layer | Estimate | Notes |
-|---------|-------|-------|----------|-------|
-| T-001 | {title} | {layer} | {est} | |
-
-#### Frontend
-
-| Task ID | Title | Layer | Estimate | Notes |
-|---------|-------|-------|----------|-------|
-| T-007 | {title} | {layer} | {est} | |
-
-#### Supporting
-
-| Task ID | Title | Layer | Estimate | Notes |
-|---------|-------|-------|----------|-------|
-| T-011 | {title} | {layer} | {est} | |
-
----
-
-## Task Dependencies
-
-| Task | Depends On | Reason |
-|------|------------|--------|
-| T-003 | T-001, T-002 | {reason} |
-
----
-
-## Effort Summary
-
-| Layer | Tasks | Hours |
-|-------|-------|-------|
-| {layer} | {n} | {h} |
-| **Total** | **{n}** | **{h}h** |
-
----
-
-## Open Questions
-
-{If none: No open questions.}
-
----
-
-*Generated by stories-and-tasks-agent v1.0 — Phase 2*
-```
-
-#### Save Task Files
-
-Save each task as `docs/feat/{feature-name}/{T-ID}.md`.
-
-Save the combined plan as `docs/feat/{feature-name}/{feature-name}-technical-plan-{YYYY-MM-DD}.md`.
-
-Verify:
 ```bash
 ls -la docs/feat/{feature-name}/
 ```
 
----
+If any task file or the combined plan is missing — re-invoke the skill before continuing.
 
-### Step 2 — Final Summary
+### Step 4 — Final Summary
 
 ```
 ═══════════════════════════════════════════════════════════════════
@@ -436,15 +142,3 @@ Next Step (optional):
 |-----------|-------|------|
 | **From** | business-analyst-agent | Approved feature spec |
 | **To** | feat-to-gitlab-issues | US-*.md and T-*.md files |
-
-## Quality Checklist
-
-Before printing the final summary:
-- [ ] Correct number of stories — no merging of distinct behaviours, no inflation
-- [ ] Every story has all three scenarios in Given / When / Then format
-- [ ] Every story has minimum 3 acceptance criteria
-- [ ] No code or pseudocode in any task file
-- [ ] Task IDs are sequential across all stories — not reset per story
-- [ ] Every task has a Linked Story field pointing to its US-ID
-- [ ] Combined technical plan written and verified on disk
-- [ ] All files verified with `ls` before printing summary
