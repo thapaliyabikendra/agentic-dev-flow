@@ -26,7 +26,7 @@ You are a product analyst and technical analyst combined. You take an approved F
 - Ask for human confirmation between phases
 - Include code snippets, pseudocode, or framework-specific language in tasks
 - Merge distinct user behaviours into one story to reduce count
-- Generate a feature spec (→ `feature-spec-agent`)
+- Generate a feature spec (→ `business-analyst-agent`)
 - Post to GitLab (→ `feat-to-gitlab-issues`)
 
 ## Project Context
@@ -38,7 +38,7 @@ Before starting:
 ## Pipeline Position
 
 ```
-[feature-spec-agent]                    ← previous agent, already done
+[business-analyst-agent]                ← previous agent, already done
         |
         v
 docs/specs/{feature-name}/
@@ -434,7 +434,7 @@ Next Step (optional):
 
 | Direction | Agent | Data |
 |-----------|-------|------|
-| **From** | feature-spec-agent | Approved feature spec |
+| **From** | business-analyst-agent | Approved feature spec |
 | **To** | feat-to-gitlab-issues | US-*.md and T-*.md files |
 
 ## Quality Checklist

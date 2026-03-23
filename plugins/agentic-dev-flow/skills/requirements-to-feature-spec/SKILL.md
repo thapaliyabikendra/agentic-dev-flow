@@ -1,50 +1,38 @@
 ---
 name: requirements-to-feature-spec
 version: 1.0
-description: Converts raw requirements (notes, briefs, bullet points, or a requirements file) into a structured Feature Specification document. Extracts the feature name, business goals, actors, scope, business rules, assumptions, and open questions. Output is a .md feature spec file saved to docs/specs/{feature}/ and ready to feed into the feature-spec-to-user-stories skill. Use this skill whenever someone provides requirements and wants to produce a feature spec, says "write a spec for this", "turn this into a feature spec", or provides a requirements file and wants it structured.
+description: Converts raw requirements (notes, briefs, bullet points, or a requirements file) into a structured Feature Specification document. Input is either a file path or inline text. Output is a .md feature spec file saved to docs/specs/{feature-name}/. Use this skill whenever someone provides requirements and wants to produce a feature spec, says "write a spec for this", "turn this into a feature spec", or provides a requirements file and wants it structured.
 ---
 
 You are a product analyst. Your job is to take raw, unstructured requirements and produce a clear, structured Feature Specification — defining what to build, for whom, and why. No implementation detail. No code. No endpoints.
 
 ---
 
-## CRITICAL — File Output Rule
+## Input
 
-**You MUST write a physical file to disk. This is not optional.**
+- `requirements` — raw text or a file path to a requirements document
 
-Every run MUST produce this file:
+---
+
+## Output
+
+A single `.md` file written to:
 
 ```
 docs/specs/{feature-name}/{feature-name}-feature-spec-{YYYY-MM-DD}.md
 ```
 
-**Never stop after showing content in chat. Always write the file.**
-
-Execution order:
-
-```
-Step 1 → Step 2 → Step 3 (WRITE FILE) → Step 4
-```
+Where `{feature-name}` is lowercase and hyphenated (e.g. `user-onboarding`, `role-management`).
 
 ---
 
-## Step 1 — Read the Requirement
+## Steps
 
-If the user provides a file path, read it:
+### Step 1 — Read the Input
 
-```bash
-# Auto-detect if not provided
-find . -maxdepth 3 \( \
-  -iname "requirements*.md" -o \
-  -iname "requirements*.txt" -o \
-  -iname "brief*.md" -o \
-  -iname "feature*.md" \
-\) ! -path "*/.git/*" | head -10
-```
+If the input is a file path, read the file content. If the input is inline text, use it directly.
 
-If the user pastes text directly, use that as the input.
-
-Extract the following from whatever is provided:
+Extract the following from the content:
 
 - **Feature name** — what system, module, or capability this is about
 - **Business goal** — why this is being built and what problem it solves
@@ -52,13 +40,13 @@ Extract the following from whatever is provided:
 - **Constraints or rules** — anything explicitly stated about how it must behave
 - **Out of scope** — anything mentioned as excluded or deferred
 
-If any of these are missing or ambiguous, note them as open questions — do not invent answers.
+If any of these are missing or ambiguous, note them as open questions. Do not invent answers.
 
 ---
 
-## Step 2 — Generate Feature Specification Content
+### Step 2 — Fill the Feature Spec Template
 
-Use this structure exactly. Replace every `{placeholder}` with real content from the requirement. Do not leave placeholders in the output.
+Use this structure exactly. Replace every `{placeholder}` with real content. Do not leave placeholders in the output.
 
 ```markdown
 # Feature Specification — {Feature Name}
@@ -99,11 +87,9 @@ Keep it plain — a non-technical stakeholder should understand this.}
 
 **In Scope:**
 - {what is included in this feature}
-- {what is included}
 
 **Out of Scope:**
-- {what is explicitly excluded}
-- {what is deferred to a later phase}
+- {what is explicitly excluded or deferred}
 
 ---
 
@@ -121,7 +107,6 @@ Keep it plain — a non-technical stakeholder should understand this.}
 ## Assumptions
 
 - {anything assumed but not stated in the requirements}
-- {anything inferred from context}
 
 *(If no assumptions, write: No assumptions at this stage.)*
 
@@ -132,7 +117,6 @@ Keep it plain — a non-technical stakeholder should understand this.}
 | # | Question | Impact if Unresolved |
 |---|----------|----------------------|
 | 1 | {unclear or missing requirement} | {what decision it blocks} |
-| 2 | {unclear or missing requirement} | {what decision it blocks} |
 
 *(If no open questions, write: No open questions at this stage.)*
 
@@ -144,55 +128,12 @@ Keep it plain — a non-technical stakeholder should understand this.}
 
 ---
 
-## Step 3 — Write the File
+### Step 3 — Write the File
 
-Create the folder and write the file:
-
-```bash
-mkdir -p docs/specs/{feature-name}
-```
-
-Then write the file:
+Create the output folder and write the filled template to:
 
 ```
-path: docs/specs/{feature-name}/{feature-name}-feature-spec-{YYYY-MM-DD}.md
-```
-
-Use the real feature name, lowercase, hyphenated (e.g. `user-onboarding`, `role-management`).
-
-Verify the file was written:
-
-```bash
-ls -la docs/specs/{feature-name}/
-```
-
-If the file is missing, write it again before proceeding.
-
----
-
-## Step 4 — Print Summary
-
-```
-═══════════════════════════════════════════════════════════════════
-Requirements → Feature Specification Complete
-═══════════════════════════════════════════════════════════════════
-
-Source:   {filename or "inline input"}
-Feature:  {feature name}
-
-Output:
-  ✓ docs/specs/{feature-name}/{feature-name}-feature-spec-{date}.md
-
-Extracted:
-  Actors:          {n}
-  Business Rules:  {n}
-  Assumptions:     {n}
-  Open Questions:  {n} — review before proceeding
-
-Next Step:
-  → Feed output into feature-spec-to-user-stories skill
-
-═══════════════════════════════════════════════════════════════════
+docs/specs/{feature-name}/{feature-name}-feature-spec-{YYYY-MM-DD}.md
 ```
 
 ---
@@ -204,3 +145,5 @@ Next Step:
 - Do not mention implementation, code, endpoints, or architecture
 - If the requirement is a single sentence, still produce the full spec structure — mark missing sections as open questions
 - Feature name in the file path must be lowercase and hyphenated
+- Do not search for input files — only use what is provided
+- Do not verify, retry, or narrate what was done — just write the file and return the output path
