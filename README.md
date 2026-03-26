@@ -6,35 +6,49 @@
 
 `agentic-dev-flow` extends Claude Code with a structured planning pipeline. Give it a goal and it produces a complete, dependency-aware development plan — broken into phases, tasks, sub-tasks, and execution waves — ready to act on immediately.
 
-## Plugin Structure
+## Repository Structure
 
 ```
 agentic-dev-flow/
 ├── .claude-plugin/
-│   └── plugin.json                     # Plugin manifest (required)
-├── skills/
-│   ├── task-planner/
-│   │   └── SKILL.md                    # Full project planning skill
-│   ├── task-breakdown/
-│   │   └── SKILL.md                    # Single-task decomposition skill
-│   └── dependency-mapper/
-│       └── SKILL.md                    # Dependency & critical-path skill
-├── agents/
-│   ├── planner-orchestrator.md         # End-to-end planning pipeline agent
-│   ├── task-breakdown-specialist.md    # Deep task decomposition agent
-│   └── dependency-analyst.md          # Dependency graph & critical path agent
-├── hooks/
-│   └── hooks.json                      # Lifecycle event hooks
+│   └── marketplace.json                # Marketplace catalog
+├── plugins/
+│   └── agentic-dev-flow/               # Plugin source
+│       ├── .claude-plugin/
+│       │   └── plugin.json             # Plugin manifest
+│       ├── skills/
+│       │   ├── task-planner/
+│       │   │   └── SKILL.md            # Full project planning skill
+│       │   ├── task-breakdown/
+│       │   │   └── SKILL.md            # Single-task decomposition skill
+│       │   ├── dependency-mapper/
+│       │   │   └── SKILL.md            # Dependency & critical-path skill
+│       │   ├── requirements-to-feature-spec/
+│       │   │   └── SKILL.md            # Requirements → feature spec skill
+│       │   ├── feature-spec-to-user-stories/
+│       │   │   └── SKILL.md            # Feature spec → user stories skill
+│       │   └── user-stories-to-tasks/
+│       │       └── SKILL.md            # User stories → technical task plan skill
+│       ├── agents/
+│       │   ├── planner-orchestrator.md         # End-to-end planning agent
+│       │   ├── task-breakdown-specialist.md    # Deep task decomposition agent
+│       │   └── dependency-analyst.md           # Dependency graph & critical path agent
+│       ├── hooks/
+│       │   └── hooks.json              # Lifecycle event hooks
+│       └── CLAUDE.md                   # Plugin context injected into every session
 └── README.md
 ```
 
 ## Skills
 
-| Skill | Slash Command | When Claude uses it automatically |
-|-------|--------------|----------------------------------|
-| `task-planner` | `/agentic-dev-flow:task-planner` | User wants to plan a project or feature |
-| `task-breakdown` | `/agentic-dev-flow:task-breakdown` | User asks to break down a specific task |
-| `dependency-mapper` | `/agentic-dev-flow:dependency-mapper` | User asks about task order or dependencies |
+| Skill | Slash Command | When to Use |
+|-------|--------------|-------------|
+| `task-planner` | `/agentic-dev-flow:task-planner` | Plan a project or feature from a goal |
+| `task-breakdown` | `/agentic-dev-flow:task-breakdown` | Decompose a single large task into sub-tasks |
+| `dependency-mapper` | `/agentic-dev-flow:dependency-mapper` | Map task dependencies and find the critical path |
+| `requirements-to-feature-spec` | `/agentic-dev-flow:requirements-to-feature-spec` | Turn raw requirements into a structured feature spec |
+| `feature-spec-to-user-stories` | `/agentic-dev-flow:feature-spec-to-user-stories` | Generate user stories from a feature spec |
+| `user-stories-to-tasks` | `/agentic-dev-flow:user-stories-to-tasks` | Generate a technical task plan from user stories |
 
 ## Sub-Agents
 
@@ -46,34 +60,58 @@ agentic-dev-flow/
 
 ## Installation
 
-### Via Claude Code CLI (recommended)
+### From the official Anthropic marketplace (recommended)
+
+Once accepted, install directly:
 
 ```bash
-# Install from the GitHub marketplace once published
-/plugin install agentic-dev-flow@github:thapaliyabikendra
-
-# Or install locally from a cloned copy
-/plugin install /path/to/agentic-dev-flow
+/plugin install agentic-dev-flow@claude-plugins-official
 ```
 
-### Via Agent SDK
+### From GitHub
 
-```typescript
-import { query } from "@anthropic-ai/claude-agent-sdk";
-import * as path from "path";
+Add this repo as a marketplace, then install the plugin:
 
-for await (const message of query({
-  prompt: "Plan a REST API for a task management app",
-  options: {
-    plugins: [{ type: "local", path: path.resolve("./agentic-dev-flow") }],
-    allowedTools: ["Read", "Grep", "Glob", "Agent"],
+```bash
+# Step 1: add the marketplace
+/plugin marketplace add thapaliyabikendra/agentic-dev-flow
+
+# Step 2: install the plugin
+/plugin install agentic-dev-flow@agentic-dev-flow
+```
+
+### Local development / testing
+
+```bash
+claude --plugin-dir ./agentic-dev-flow
+```
+
+### For your whole team
+
+Add to `.claude/settings.json` in your repo so teammates are prompted to install automatically:
+
+```json
+{
+  "extraKnownMarketplaces": {
+    "agentic-dev-flow": {
+      "source": {
+        "source": "github",
+        "repo": "thapaliyabikendra/agentic-dev-flow"
+      }
+    }
   },
-})) {
-  if (message.type === "assistant") {
-    console.log(message.content);
+  "enabledPlugins": {
+    "agentic-dev-flow@agentic-dev-flow": true
   }
 }
 ```
+
+### Submit to official marketplace
+
+To submit this plugin for inclusion in the Anthropic official marketplace:
+
+- **Claude.ai**: [claude.ai/settings/plugins/submit](https://claude.ai/settings/plugins/submit)
+- **Console**: [platform.claude.com/plugins/submit](https://platform.claude.com/plugins/submit)
 
 ## Usage Examples
 
