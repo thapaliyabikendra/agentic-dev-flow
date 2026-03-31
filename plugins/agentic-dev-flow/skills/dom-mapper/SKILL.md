@@ -61,6 +61,19 @@ The calling agent uses the returned selector map to update each TC's steps via
 `generate-test-plan: updateStepSelector()`. No shared state file — results flow directly
 into TC files.
 
+## Toast / overlay capture
+
+When targets include toast, notification, success, or error messages:
+
+1. **Trigger first, then snapshot** — perform the action that causes the toast before taking the DOM snapshot. Do not snapshot before the trigger.
+2. **Include portal/overlay roots** — toast libraries render outside `main`, typically appended to `body`. Always capture the overlay root alongside the main content scope. Do not limit the snapshot to a modal container only.
+3. **Preferred selectors** — check in this order:
+   - `role="status"` or `role="alert"` with matching text → high confidence
+   - `[aria-live]` containers with matching text → high confidence
+   - Framework-specific overlay containers discovered in the live DOM (e.g. an element with `toast`, `notification`, `snack`, or `alert` in its `id` or `class`) → medium confidence
+   - Visible text fallback: `<container>:has-text("<message>")` → low confidence
+4. **Auto-dismissing toasts** — if the toast may disappear before the snapshot is taken, try to pause or extend it via the app's own API before exploring. If that is not possible, return `selector: null` instead of guessing.
+
 ## Rules
 
 - Never fabricate selectors — only return what exists in the DOM.

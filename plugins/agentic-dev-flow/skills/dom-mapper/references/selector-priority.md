@@ -44,6 +44,7 @@ Set `selector: null` if:
 - The element does not appear in the DOM snapshot at all
 - The element is inside an iframe that was not snapshotted
 - The element only appears after a user interaction not yet performed
+- The element is a toast/notification that auto-dismissed before the snapshot was taken and could not be paused
 
 **Never guess a selector for a null result.** Block script generation and flag
 for human review.
@@ -62,3 +63,10 @@ If the DOM snapshot is over 50k characters, scope the snapshot:
 const html = await page.locator('main, form, [role="main"]').first().innerHTML();
 ```
 This avoids token waste on headers/footers/nav that rarely contain test targets.
+
+**Toast / overlay targets** live outside `main`. Discover the overlay root from the live DOM first (look for elements with `toast`, `notification`, `snack`, or `alert` in their `id`/`class` appended to `body`), then include it alongside the scoped selector:
+```typescript
+const main = await page.locator('main, form, [role="main"]').first().innerHTML();
+const overlay = await page.locator('body > [id*="toast"], body > [class*="toast"], body > [id*="notification"], body > [role="alert"], body > [aria-live]').innerHTML().catch(() => '');
+const html = main + overlay;
+```
