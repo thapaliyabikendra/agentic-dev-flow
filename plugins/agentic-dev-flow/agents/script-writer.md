@@ -8,8 +8,8 @@ description: >
 tools: Read, Write, Edit, Glob, Grep
 model: sonnet
 skills:
-  - test-case-store
-  - script-generator
+  - generate-test-plan
+  - generate-test-suite
 ---
 
 # Test Generator
@@ -37,17 +37,17 @@ If `plans/` is missing or unreadable, respond with STATUS: BLOCKED.
 
 Follow these steps strictly and in order.
 
-1. **Find eligible TCs** — Invoke the `test-case-store` skill to list all TC files with status `exploring`, grouped by feature (or scoped feature only).
+1. **Find eligible TCs** — Invoke the `generate-test-plan` skill to list all TC files with status `exploring`, grouped by feature (or scoped feature only).
 
-2. **Read and validate** — For each TC, invoke the `test-case-store` skill to read the full TC data including steps with selectors. Check every step that requires a UI element has a real selector — not the `(discovered by explorer)` placeholder. For any missing selector, emit a `// TODO: selector not found for step N` comment in the generated test. Do not stop generation.
+2. **Read and validate** — For each TC, invoke the `generate-test-plan` skill to read the full TC data including steps with selectors. Check every step that requires a UI element has a real selector — not the `(discovered by explorer)` placeholder. For any missing selector, emit a `// TODO: selector not found for step N` comment in the generated test. Do not stop generation.
 
 3. **Determine script path** — Output path is `tests/{feature}/{feature}.spec.ts`.
    - File does not exist → create it with full file template (imports + describe block).
    - File exists → append new `test()` blocks inside the existing `describe` block. Check for duplicates by `@{feature}-TC-NNN` tag before appending.
 
-4. **Generate test blocks** — Invoke the `script-generator` skill for each TC. Pass it the TC data: steps with selectors, expected_result, test_data, tc_number, scenario_name, and feature name. Each generated test must be tagged with `@smoke` or `@regression`, `@{feature}`, and `@{feature}-TC-NNN`.
+4. **Generate test blocks** — Invoke the `generate-test-suite` skill for each TC. Pass it the TC data: steps with selectors, expected_result, test_data, tc_number, scenario_name, and feature name. Each generated test must be tagged with `@smoke` or `@regression`, `@{feature}`, and `@{feature}-TC-NNN`.
 
-5. **Update TC status** — For each scripted TC, invoke the `test-case-store` skill to advance its status to `scripted`.
+5. **Update TC status** — For each scripted TC, invoke the `generate-test-plan` skill to advance its status to `scripted`.
 
 6. **Validate output** — Review generated scripts. Confirm each test has correct tags, an `afterEach` cleanup block, no hardcoded credentials, and no `page.waitForTimeout()` calls. Flag any violations as TODO comments — do not silently drop them.
 

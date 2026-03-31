@@ -1,5 +1,5 @@
 ---
-name: script-generator
+name: generate-test-suite
 description: Converts a parsed QA scenario and selector map into a Playwright
   TypeScript test() function. Use this skill whenever generating, writing, or
   regenerating Playwright test code from spec steps and selectors. Always invoke
@@ -14,13 +14,13 @@ One scenario per invocation.
 
 ## How to invoke
 
-Read `.claude/skills/script-generator/references/action-to-playwright.md` for the full code mapping
+Read `.claude/skills/generate-test-suite/references/action-to-playwright.md` for the full code mapping
 table, value substitution rules, URL resolution, role-based selector syntax, auth override, and the
 complete file template. Apply all rules from that file exactly.
 
 ## Input
 
-**Scenario data** passed directly from the calling agent (read from the TC file via `test-case-store`):
+**Scenario data** passed directly from the calling agent (read from the TC file via `generate-test-plan`):
 ```json
 {
   "tc_number": "service-type-TC-001",
@@ -83,7 +83,7 @@ test('scenario name @smoke @{feature} @{feature}-TC-001', async ({ page }) => {
 
 - Append all tags from `scenario.tags[]` to the end of the test title string, space-separated.
 - Always include `@[feature_name]` (e.g. `@login`, `@service-type`) even if not in the `.feature` file — derive it from `feature_name`.
-- `scenario.tags[]` is populated by `story-parser` and always contains either `@smoke` or `@regression` — do not override or add a default.
+- `scenario.tags[]` is populated by `analyze-story` and always contains either `@smoke` or `@regression` — do not override or add a default.
 - If `@skip` is present, emit `test.skip(...)` instead of `test(...)`.
 - If `@flaky` is present, emit a comment above: `// FLAKY: known intermittent — investigate before fixing`.
 - Example with skip:

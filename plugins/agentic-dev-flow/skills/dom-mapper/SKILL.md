@@ -58,7 +58,7 @@ DOM: {HTML_SNIPPET}
 ## After receiving output
 
 The calling agent uses the returned selector map to update each TC's steps via
-`test-case-store: updateStepSelector()`. No shared state file — results flow directly
+`generate-test-plan: updateStepSelector()`. No shared state file — results flow directly
 into TC files.
 
 ## Rules

@@ -8,8 +8,8 @@ description: >
 tools: Read, Write, Edit, Glob, Grep, mcp__playwright__browser_navigate, mcp__playwright__browser_navigate_back, mcp__playwright__browser_snapshot, mcp__playwright__browser_take_screenshot, mcp__playwright__browser_click, mcp__playwright__browser_hover, mcp__playwright__browser_wait_for, mcp__playwright__browser_tabs, mcp__playwright__browser_close, mcp__playwright__browser_handle_dialog, mcp__playwright__browser_console_messages, mcp__playwright__browser_fill_form, mcp__playwright__browser_type, mcp__playwright__browser_select_option
 model: sonnet
 skills:
-  - story-parser
-  - test-case-store
+  - analyze-story
+  - generate-test-plan
   - dom-mapper
   - auth-handler
 memory: project
@@ -50,11 +50,11 @@ Follow these steps strictly and in order.
 
 1. **Read environment** — Read `.env`. Extract `APP_URL`, `TEST_EMAIL`, `TEST_PASSWORD`, `STORIES_DIR`. If any are missing, stop immediately with STATUS: BLOCKED.
 
-2. **Parse stories** — List all `.md` files in `$STORIES_DIR`. For each file (or the scoped feature only), invoke the `story-parser` skill. It returns `feature_name`, `user_story`, and `scenarios[]` for each story.
+2. **Parse stories** — List all `.md` files in `$STORIES_DIR`. For each file (or the scoped feature only), invoke the `analyze-story` skill. It returns `feature_name`, `user_story`, and `scenarios[]` for each story.
 
-3. **Sync TC files** — For each scenario returned by `story-parser`, invoke the `test-case-store` skill to check whether a TC file already exists for that scenario.
+3. **Sync TC files** — For each scenario returned by `analyze-story`, invoke the `generate-test-plan` skill to check whether a TC file already exists for that scenario.
    - Exists → skip entirely. Never modify existing TC files.
-   - Does not exist → invoke `test-case-store` to create the TC file with `Status: pending`.
+   - Does not exist → invoke `generate-test-plan` to create the TC file with `Status: pending`.
 
 4. **Authenticate** — Invoke the `auth-handler` skill. It will navigate to `APP_URL` via the MCP browser and perform the login flow directly (MCP browser always starts fresh — `setup/auth.json` cannot be injected into it). The skill fills in credentials and waits for the SSO redirect to complete before returning.
 
@@ -62,11 +62,11 @@ Follow these steps strictly and in order.
    - Navigate to the page URL referenced in Navigate steps.
    - Wait for `networkidle` before snapshotting.
    - If redirected to `/login` or `/sso` — re-invoke `auth-handler`, retry navigation once.
-   - If 404 or navigation fails — invoke `test-case-store` to mark affected steps with `(page not found — verify URL)`, continue to next TC.
+   - If 404 or navigation fails — invoke `generate-test-plan` to mark affected steps with `(page not found — verify URL)`, continue to next TC.
    - Take a DOM snapshot scoped to `main` or `[role="main"]`.
    - Invoke the `dom-mapper` skill with the semantic element names and the DOM snapshot. It returns a selector map with confidence scores.
-   - Invoke `test-case-store` to write each discovered selector into the TC's Steps section.
-   - Invoke `test-case-store` to advance the TC status to `exploring`.
+   - Invoke `generate-test-plan` to write each discovered selector into the TC's Steps section.
+   - Invoke `generate-test-plan` to advance the TC status to `exploring`.
 
 6. **Validate** — Review all updated TC files. Identify null selectors and low-confidence selectors. Flag them for human review.
 

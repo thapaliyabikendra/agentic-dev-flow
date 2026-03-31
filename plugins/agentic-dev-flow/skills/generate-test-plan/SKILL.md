@@ -1,5 +1,5 @@
 ---
-name: test-case-store
+name: generate-test-plan
 description: Manages all reads and writes to per-TC Markdown files in plans/{feature}/{feature}-TC-NNN.md. Replaces state-manager. Use this skill whenever any agent needs to read TC status, create a new TC file, or update a specific field. Never overwrite a TC file entirely — always patch specific fields.
 ---
 

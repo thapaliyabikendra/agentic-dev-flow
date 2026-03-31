@@ -1,5 +1,5 @@
 ---
-name: story-parser
+name: analyze-story
 description: Parses a user story .md file into structured data. Use this skill whenever reading user story files from STORIES_DIR. Always invoke from spec-parser at Phase 1.
 ---
 
