@@ -20,7 +20,7 @@ complete file template. Apply all rules from that file exactly.
 
 ## Input
 
-**Scenario data** passed directly from the calling agent (read from the TC file via `tc-manager`):
+**Scenario data** passed directly from the calling agent (read from the TC file via `test-case-store`):
 ```json
 {
   "tc_number": "service-type-TC-001",

@@ -1,5 +1,5 @@
 ---
-name: tc-manager
+name: test-case-store
 description: Manages all reads and writes to per-TC Markdown files in plans/{feature}/{feature}-TC-NNN.md. Replaces state-manager. Use this skill whenever any agent needs to read TC status, create a new TC file, or update a specific field. Never overwrite a TC file entirely — always patch specific fields.
 ---
 
@@ -34,10 +34,7 @@ Manage `plans/{feature}/{feature}-TC-NNN.md` files — the single source of trut
 **Test Data:**
 - Name: `Wire Transfer`
 
-**Result:** (populated after execution)
-**Error:** (populated on failure)
-**Recovery Action:** (populated by result-analyst)
-**Screenshot:** (populated on failure)
+**Tags:** @smoke/@regression @{feature} @{feature}-TC-NNN
 ```
 
 ---
@@ -59,7 +56,7 @@ Create a new `plans/{feature}/{feature}-TC-NNN.md` file from a parsed scenario s
 
 Update the `**Status:**` line in the specified TC file.
 
-Valid statuses: `pending`, `exploring`, `scripted`, `running`, `complete`, `failed`, `escalated`, `skipped`
+Valid statuses: `pending`, `exploring`, `scripted`
 
 Patch only the `**Status:**` line. Leave all other content untouched.
 
@@ -70,16 +67,6 @@ Update the `→ selector:` portion of a specific numbered step line.
 - Match step by its number prefix (e.g. `3. Enter name...`).
 - Replace `→ selector: (discovered by explorer)` or any existing selector value with `→ selector: \`{selector}\``.
 - Leave step text before the `→` unchanged.
-
-### `updateField(feature, tc_number, field_name, value)`
-
-Update any single `**FieldName:**` line in the TC file.
-
-Used for: `Result`, `Error`, `Recovery Action`, `Screenshot`
-
-- Match the line `**{field_name}:** ...` and replace the value after the colon.
-- If the value is multi-line (e.g. a long error message), wrap in a fenced block on the next line.
-- Leave all other lines untouched.
 
 ### `readTC(feature, tc_number)`
 
@@ -99,11 +86,7 @@ Read and parse a single TC file. Return:
     { "number": 2, "text": "Click \"New Service Type\" button", "selector": "[data-testid=\"btn-new-service-type\"]" }
   ],
   "expected_result": ["..."],
-  "test_data": ["..."],
-  "result": null,
-  "error": null,
-  "recovery_action": null,
-  "screenshot": null
+  "test_data": ["..."]
 }
 ```
 
