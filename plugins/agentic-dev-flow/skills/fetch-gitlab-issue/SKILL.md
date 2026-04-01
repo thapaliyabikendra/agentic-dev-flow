@@ -1,5 +1,5 @@
 ---
-name: gitlab-get-issue
+name: fetch-gitlab-issue
 version: 1.0
 description: Fetches one or more GitLab issues by ID and displays them in Markdown format. Can also fetch linked issues. Simple, focused on output.
 mcp_servers:
