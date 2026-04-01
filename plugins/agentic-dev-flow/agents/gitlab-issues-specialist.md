@@ -2,7 +2,7 @@
 name: gitlab-issues-agent
 version: 1.0
 description: "Reads approved User Story files (US-001.md, US-002.md) and Task files (T-001.md, T-002.md) from docs/feat/{feature-name}/ and creates one GitLab issue per file. User stories are posted first, tasks are posted second and linked back to their source story issues. Use when stories and tasks have been generated and approved, someone says 'post to GitLab', 'create the issues', or 'run the gitlab agent'."
-model: claude-sonnet-4-5
+model: sonnet
 tools: Read, Glob, Bash
 skills: feat-to-gitlab-issues@1.0
 mcp_servers:

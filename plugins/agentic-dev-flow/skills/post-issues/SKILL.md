@@ -1,5 +1,5 @@
 ---
-name: feat-to-gitlab-issues
+name: post-issues
 version: 1.0
 description: Reads User Story files (US-001.md, US-002.md) and Task files (T-001.md, T-002.md) from a feature folder under docs/feat/{feature-name}/ and creates GitLab issues for each one. User stories are posted as issues with their scenarios and acceptance criteria. Tasks are posted as issues linked back to their source user story issue. Reads project context (project ID, allowed labels, available users) from CLAUDE.md. Use after feature-spec-to-user-stories and user-stories-to-tasks have produced files and you want everything tracked in GitLab.
 mcp_servers:

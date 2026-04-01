@@ -2,7 +2,7 @@
 name: business-analyst-agent
 version: 1.0
 description: "Converts raw requirements into a structured Feature Specification document. Use when someone provides requirements and wants a spec produced, says 'write a spec for this', 'spec this out', or is starting a new feature and no spec exists yet. Stops after writing the spec and waits for human review before the pipeline continues."
-model: claude-sonnet-4-5
+model: sonnet
 tools: Read, Write, Edit, Glob, Grep, Bash
 skills: requirements-to-feature-spec@1.0
 ---

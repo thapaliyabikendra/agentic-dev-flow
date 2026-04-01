@@ -1,5 +1,5 @@
 ---
-name: feature-spec-to-user-stories
+name: user-stories-generator
 version: 1.0
 description: Converts a Feature Specification or raw requirements into one or more structured User Story files. Reads the input, determines how many user stories are needed based on the number of distinct actors and actions, and generates each story with scenarios and acceptance criteria. Stories are saved directly inside docs/feat/{feature-name}/ as US-001.md, US-002.md, etc. Use this skill whenever someone says "write user stories for this", "generate stories from this spec", "turn this into user stories", or provides a feature spec or requirements and wants user stories produced from it.
 ---

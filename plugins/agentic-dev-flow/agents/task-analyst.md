@@ -2,7 +2,7 @@
 name: task-analyst
 version: 1.0
 description: "Converts an approved Feature Specification into user stories and high-level technical tasks. Runs both stages back-to-back automatically — no pause between them. Use when a feature spec has been reviewed and approved, someone says 'generate stories and tasks', 'continue the pipeline', or 'run stories and tasks on this spec'."
-model: claude-sonnet-4-5
+model: sonnet
 tools: Read, Write, Edit, Glob, Grep, Bash
 skills: feature-spec-to-user-stories@1.0, user-stories-to-tasks@1.0
 ---
