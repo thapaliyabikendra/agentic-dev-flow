@@ -65,7 +65,7 @@ Ask clarifying questions **ONE AT A TIME**. Wait for the user's answer before as
 - Key constraints are stated (even if "none known")
 - No remaining question would change a functional requirement
 
-Do not ask more than 10 questions total. If after 10 questions there is still ambiguity, note it as an Open Question in the FRS.
+Do not ask more than 10 questions total. After 10 questions, **STOP asking regardless of remaining ambiguity**. Any unresolved ambiguities become Open Questions in Step 4.
 
 ---
 
@@ -89,7 +89,17 @@ From the raw requirements + answers, extract:
 ## Step 5: Generate FRS Issue
 
 1. Load `skills/requirement-to-frs/templates/frs-issue-template.md`
-2. Fill every `{{placeholder}}` with the extracted content from Step 4
+2. Fill the template using this mapping from Step 4:
+   - `{{feature_description}}` ← Feature name + Business goals
+   - `{{actors_table}}` ← Actors (one row per actor: name, type, role)
+   - `{{in_scope}}` ← Scope (in-scope items as bullet list)
+   - `{{out_of_scope}}` ← Scope (out-of-scope items as bullet list)
+   - `{{fr_numbered_list}}` ← Functional requirements (FR-001, FR-002, ...)
+   - `{{user_scenarios_given_when_then}}` ← User scenarios (Given/When/Then)
+   - `{{nfr_list}}` ← Non-functional requirements as bullet list
+   - `{{ac_checklist}}` ← Acceptance criteria as `- [ ] criterion` checklist
+   - `{{assumptions}}` ← Assumptions as bullet list
+   - `{{open_questions}}` ← Open questions as numbered list
 3. Create the GitLab issue:
 
 ```
