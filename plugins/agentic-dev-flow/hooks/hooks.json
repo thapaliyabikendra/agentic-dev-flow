@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo '[agentic-dev-flow] Tip: Run /agentic-dev-flow:task-planner first to generate a plan before making changes.'"
+            "command": "echo '[agentic-dev-flow] Tip: Run /agentic-dev-flow:requirement-to-frs first to generate a FRS, or /agentic-dev-flow:workflow-orchestrator for the full pipeline.'"
           }
         ]
       }
@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo '[agentic-dev-flow] Sub-agent completed. Review the plan before proceeding to implementation.'"
+            "command": "echo '[agentic-dev-flow] Sub-agent completed. Review the output before proceeding to the next phase.'"
           }
         ]
       }

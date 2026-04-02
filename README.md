@@ -4,59 +4,59 @@
 
 ## What it does
 
-`agentic-dev-flow` extends Claude Code with a structured planning pipeline. Give it a goal and it produces a complete, dependency-aware development plan — broken into phases, tasks, sub-tasks, and execution waves — ready to act on immediately.
+`agentic-dev-flow` extends Claude Code with an 8-phase human-in-the-loop development pipeline. Each phase has a dedicated skill. Human approval gates sit between every phase to keep humans in control. The full pipeline runs from raw requirements all the way to a release-ready artifact set.
 
 ## Repository Structure
 
 ```
 agentic-dev-flow/
 ├── .claude-plugin/
-│   └── marketplace.json                # Marketplace catalog
+│   └── marketplace.json
 ├── plugins/
-│   └── agentic-dev-flow/               # Plugin source
+│   └── agentic-dev-flow/
 │       ├── .claude-plugin/
-│       │   └── plugin.json             # Plugin manifest
+│       │   └── plugin.json
 │       ├── skills/
-│       │   ├── task-planner/
-│       │   │   └── SKILL.md            # Full project planning skill
-│       │   ├── task-breakdown/
-│       │   │   └── SKILL.md            # Single-task decomposition skill
-│       │   ├── dependency-mapper/
-│       │   │   └── SKILL.md            # Dependency & critical-path skill
-│       │   ├── requirements-to-feature-spec/
-│       │   │   └── SKILL.md            # Requirements → feature spec skill
-│       │   ├── feature-spec-to-user-stories/
-│       │   │   └── SKILL.md            # Feature spec → user stories skill
-│       │   └── user-stories-to-tasks/
-│       │       └── SKILL.md            # User stories → technical task plan skill
+│       │   ├── requirement-to-frs/     SKILL.md + templates/
+│       │   ├── domain-design/          SKILL.md + templates/
+│       │   ├── feature-specification/  SKILL.md + templates/
+│       │   ├── implementation-execution/ SKILL.md
+│       │   ├── validation-acceptance/  SKILL.md + templates/
+│       │   ├── milestone-traceability/ SKILL.md
+│       │   ├── release-readiness/      SKILL.md + templates/
+│       │   └── workflow-orchestrator/  SKILL.md
 │       ├── agents/
-│       │   ├── planner-orchestrator.md         # End-to-end planning agent
-│       │   ├── task-breakdown-specialist.md    # Deep task decomposition agent
-│       │   └── dependency-analyst.md           # Dependency graph & critical path agent
+│       │   ├── domain-analysis-agent.md   (internal)
+│       │   ├── implementation-agent.md    (internal)
+│       │   └── qa-agent.md               (internal)
 │       ├── hooks/
-│       │   └── hooks.json              # Lifecycle event hooks
-│       └── CLAUDE.md                   # Plugin context injected into every session
+│       │   └── hooks.json
+│       └── CLAUDE.md
 └── README.md
 ```
 
 ## Skills
 
-| Skill | Slash Command | When to Use |
-|-------|--------------|-------------|
-| `task-planner` | `/agentic-dev-flow:task-planner` | Plan a project or feature from a goal |
-| `task-breakdown` | `/agentic-dev-flow:task-breakdown` | Decompose a single large task into sub-tasks |
-| `dependency-mapper` | `/agentic-dev-flow:dependency-mapper` | Map task dependencies and find the critical path |
-| `requirements-to-feature-spec` | `/agentic-dev-flow:requirements-to-feature-spec` | Turn raw requirements into a structured feature spec |
-| `feature-spec-to-user-stories` | `/agentic-dev-flow:feature-spec-to-user-stories` | Generate user stories from a feature spec |
-| `user-stories-to-tasks` | `/agentic-dev-flow:user-stories-to-tasks` | Generate a technical task plan from user stories |
+| Skill | Slash Command | Phase | When to Use |
+|-------|--------------|-------|-------------|
+| `requirement-to-frs` | `/agentic-dev-flow:requirement-to-frs` | 1+2 | Turn raw requirements into a GitLab FRS issue |
+| `domain-design` | `/agentic-dev-flow:domain-design` | 3 | Design bounded contexts and aggregates from an FRS issue |
+| `feature-specification` | `/agentic-dev-flow:feature-specification` | 4 | Generate user stories and acceptance criteria as a GitLab issue |
+| `implementation-execution` | `/agentic-dev-flow:implementation-execution` | 5 | Generate code from a Feature Spec issue |
+| `validation-acceptance` | `/agentic-dev-flow:validation-acceptance` | 6 | Generate test plan and acceptance results |
+| `milestone-traceability` | `/agentic-dev-flow:milestone-traceability` | 7 | Build traceability matrix and GitLab milestone/epic/stories |
+| `release-readiness` | `/agentic-dev-flow:release-readiness` | 8 | Score release readiness and generate release notes |
+| `workflow-orchestrator` | `/agentic-dev-flow:workflow-orchestrator` | All | Run the full 8-phase pipeline end-to-end |
 
-## Sub-Agents
+## Internal Agents
 
-| Agent | Description |
-|-------|-------------|
-| `planner-orchestrator` | Runs the full end-to-end planning pipeline |
-| `task-breakdown-specialist` | Decomposes a single large task into sub-tasks |
-| `dependency-analyst` | Computes execution waves and the critical path |
+These agents are spawned automatically by skills. Users do not invoke them directly.
+
+| Agent | Spawned by | Purpose |
+|-------|-----------|---------|
+| `domain-analysis-agent` | `domain-design` | Deep DDD analysis on FRS — returns BC/aggregate/event analysis |
+| `implementation-agent` | `implementation-execution` | Code generation from Feature Spec; internal task decomposition |
+| `qa-agent` | `validation-acceptance` | Test scenario generation; maps tests to acceptance criteria |
 
 ## Installation
 
@@ -116,22 +116,32 @@ To submit this plugin for inclusion in the Anthropic official marketplace:
 ## Usage Examples
 
 ```
-# Trigger the full planning pipeline
-"Plan a REST API for a task management app"
-"Help me plan the authentication feature"
+# Start the full pipeline from scratch
+"Start the full workflow for the user-onboarding feature"
+/agentic-dev-flow:workflow-orchestrator
 
-# Break down a specific task
-"Break down the task: Implement JWT authentication"
-"What are the sub-tasks for setting up CI/CD?"
+# Resume pipeline at a specific phase
+/agentic-dev-flow:workflow-orchestrator --from-phase=3
 
-# Map dependencies
-"What order should I tackle these tasks?"
-"Show me the critical path for my plan"
-"What depends on what in this feature list?"
+# Process raw requirements into an FRS
+"Here are the requirements: [paste text]"
+/agentic-dev-flow:requirement-to-frs
 
-# Invoke agents explicitly
-"Use the planner-orchestrator agent to plan my project"
-"Use the dependency-analyst agent to order these 10 tasks"
+# Design domain model from FRS #42
+/agentic-dev-flow:domain-design
+
+# Generate feature spec from FRS #42
+/agentic-dev-flow:feature-specification
+
+# Validate feature against spec #55
+/agentic-dev-flow:validation-acceptance
+
+# Set up GitLab milestone for v1.0.0
+/agentic-dev-flow:milestone-traceability
+
+# Check release readiness
+"Are we ready to release v1.0.0?"
+/agentic-dev-flow:release-readiness
 ```
 
 ## License
