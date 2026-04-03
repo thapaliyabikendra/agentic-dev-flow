@@ -62,3 +62,6 @@ release-readiness (→ RELEASE_NOTES.md, READINESS_REPORT.md)
 | GitLab Milestone / Epic / Stories | GitLab | 7 | GitLab |
 | RELEASE_NOTES.md | Local file | 8 | `docs/releases/<version>/` |
 | READINESS_REPORT.md | Local file | 8 | `docs/releases/<version>/` |
+
+## Note
+- Append a commit message at the end of your response if you made changes to the current repository.
