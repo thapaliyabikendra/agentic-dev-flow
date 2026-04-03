@@ -1,10 +1,12 @@
 ---
 name: requirement-to-frs
-version: 2.0
+version: 2.1
 description: >
-  Converts raw requirements into a comprehensive Functional Requirements Specification
-  with tiered complexity, domain modeling hints, UI precision, risk assessment, and
-  downstream readiness scoring. Posts result as a GitLab issue.
+  Use when converting raw requirements, BRDs, or feature ideas into a comprehensive
+  Functional Requirements Specification (FRS) with 17 sections, tiered complexity
+  assessment, and downstream readiness scoring. Phase 1 of agentic-dev-flow pipeline.
+  Trigger phrases: "write FRS", "requirement to FRS", "create FRS", "intake requirements".
+  Symptoms: ambiguous requirements, unclear scope, missing actors, vague acceptance criteria.
 mcp_servers:
   - mcp__gitlab
 ---
@@ -287,92 +289,29 @@ Create `requiredSections` array based on tier. Store for validation.
 
 **5.2 Cross-Section Consistency Checks:**
 
-Implement validator functions:
+Import and use the validator functions from `validators.js`:
 
 ```javascript
-function validateConsistency(data) {
-  const failures = [];
-
-  // 1. Actors in FRs must exist in Actors table
-  const actorNames = data.actors.map(a => a.name);
-  const frActors = new Set(data.functional_requirements.flatMap(fr => [fr.actor]));
-  for (const frActor of frActors) {
-    if (!actorNames.includes(frActor)) {
-      failures.push(`Actor "${frActor}" used in FR not defined in Actors table`);
-    }
-  }
-
-  // 2. Portal consistency across sections
-  const allPortals = new Set();
-  // Collect from Actors
-  data.actors.forEach(a => allPortals.add(a.portal));
-  // Collect from Screens
-  data.screen_catalog?.forEach(s => allPortals.add(s.portal));
-  // Check consistency: if multiple portals, they must be "both" or explicitly covered
-  if (allPortals.size > 1 && !allPortals.has('both')) {
-    failures.push(`Portal mismatch: Actors use ${[...data.actors.map(a=>a.portal)]}, Screens use ${[...data.screen_catalog.map(s=>s.portal)]}`);
-  }
-
-  // 3. UI fields map to Data Handling fields
-  const uiFieldNames = new Set(data.ui_components?.flatMap(c => c.components.map(comp => comp.name)) || []);
-  const dataFieldNames = new Set(data.data_capture?.map(f => f.field) || []);
-  for (const uiField of uiFieldNames) {
-    if (!dataFieldNames.has(uiField)) {
-      failures.push(`UI field "${uiField}" not captured in Data Handling section`);
-    }
-  }
-
-  // 4. Acceptance Criteria trace to FRs
-  const frIds = new Set(data.functional_requirements.map(fr => fr.id));
-  data.acceptance_criteria?.forEach(ac => {
-    const mapsTo = extractFRRefs(ac); // parse "FR-001, FR-002" from AC text
-    for (const ref of mapsTo) {
-      if (!frIds.has(ref)) {
-        failures.push(`Acceptance criterion references non-existent ${ref}`);
-      }
-    }
-  });
-
-  // 5. Terminology consistency
-  // Detect conflicting usage of key terms (e.g., "User" vs "Customer")
-  const termConflicts = detectTermConflicts(data);
-  failures.push(...termConflicts);
-
-  return { passed: failures.length === 0, failures };
-}
+const { validateConsistency } = require('./validators.js');
+const result = validateConsistency(data);
+// result = { passed: true/false, failures: ['error1', 'error2', ...] }
 ```
 
 Return `{ passed: boolean, failures: [string] }`.
 
+**Note:** See `validators.js` for full implementation including helper functions `extractFRRefs`, `detectTermConflicts`, and `calculateReadiness`.
+
 **5.3 Downstream Readiness Scoring:**
 
+Import and use the scorer from `validators.js`:
+
 ```javascript
-function calculateReadiness(data, complexity) {
-  const scores = { ui: 0, domain: 0, test: 0 };
-
-  // UI Prototype Readiness (0-100)
-  const section5Score = calculateSection5Completeness(data);
-  const section16Score = data.accessibility?.length > 0 ? 1 : 0;
-  const section6HasEntities = data.data_capture?.some(f => f.entity_vo) ? 1 : 0;
-  const section14Completeness = data.acceptance_criteria?.length > 0 ? 1 : 0;
-  scores.ui = (section5Score * 0.40 + section16Score * 0.20 + section6HasEntities * 0.20 + section14Completeness * 0.20) * 100;
-
-  // Domain Model Readiness
-  const section4Aggregates = data.functional_requirements?.every(fr => fr.aggregate_hint) ? 1 : 0;
-  const section6Entities = data.data_capture?.every(f => f.entity_vo) ? 1 : 0;
-  const section8Events = data.domain_events?.length > 0 ? 1 : 0;
-  const section11Clarity = data.external_systems?.length > 0 ? 1 : 0;
-  scores.domain = (section4Aggregates * 0.40 + section6Entities * 0.30 + section8Events * 0.20 + section11Clarity * 0.10) * 100;
-
-  // Test Plan Readiness
-  const section14Coverage = data.acceptance_criteria?.length >= 3 ? 1 : 0;
-  const section4Testability = data.functional_requirements?.every(fr => fr.inputs && fr.outputs) ? 1 : 0;
-  const section13Validation = data.input_validation?.length > 0 ? 1 : 0;
-  scores.test = (section14Coverage * 0.50 + section4Testability * 0.30 + section13Validation * 0.20) * 100;
-
-  return scores;
-}
+const { calculateReadiness } = require('./validators.js');
+const scores = calculateReadiness(data, data.complexity_level);
+// scores = { ui: 85.5, domain: 72.0, test: 90.0 } (percentages)
 ```
+
+See `validators.js` for the weighting formulas and completeness calculations.
 
 **5.4 Generate Completeness Report:**
 
@@ -441,14 +380,152 @@ Use `gitlab_project_id` as default for issue creation. If missing, prompt user (
 
 ---
 
-## Implementation Notes
+## Common Mistakes
 
-- Keep logic modular: separate template rendering, validation, and scoring
-- Write pure functions for each validator and scorer
-- Add helper functions for section completeness calculation
-- Template placeholders must match variable names exactly
-- Ensure backward compatibility: enhanced skill should handle varied requirement quality
-- All TDD: write tests before implementation
+| Mistake | Why it breaks | Fix |
+|---------|---------------|-----|
+| Asking multiple questions at once | Overwhelms user, violates one-at-a-time rule | Ask ONE question, wait for answer before next |
+| Skipping complexity assessment | Tier determines required sections — must assess first | Always ask Q2 (complexity) immediately after portal |
+| Ignoring "max 20 questions" limit | Token explosion, user fatigue | Track question count. At 15, start prioritizing critical ones |
+| Creating GitLab issue before validation | Pollutes tracker with incomplete FRS | Generate completeness report first. If readiness <80%, ask more questions |
+| Disregarding consistency check failures | Downstream teams get conflicting info | Fix all ❌ failures before proceeding. Use validator output directly |
+| Using vague terms inconsistently (User/Customer) | Causes terminology confusion in downstream artifacts | Run `detectTermConflicts()` and standardize terminology |
+
+---
+
+## Rationalization and Red Flags
+
+This skill enforces strict discipline. Agents may attempt workarounds under pressure. Recognize these rationalizations and reject them:
+
+**Common Excuses**
+
+| Excuse | Reality |
+|--------|---------|
+| "Requirements look complete, I can skip some questions" | Assumptions = gaps. Every section required by tier MUST be validated. |
+| "I'm out of questions, I'll proceed anyway" | Max 20 reached? Document open questions and mark as TBD. Never proceed without full section coverage. |
+| "I'll run validation after creating the issue" | Validation BEFORE issue creation. Fail fast — don't pollute GitLab with incomplete specs. |
+| "This section doesn't apply" | Check complexity tier. If listed as required, it applies. Simple: 9 sections; Moderate: 13; Complex: 17. |
+| "I'm just going to fill the template with placeholders" | TBD items must be explicit. Never guess. Unknown = open question, not assumption. |
+
+**Red Flags - STOP and Reassess**
+
+- ❌ Asking multiple questions in one message
+- ❌ Skipping portal or complexity assessment
+- ❌ Creating local files
+- ❌ Proceeding without completeness report
+- ❌ Ignoring consistency check failures (any ❌ in validation)
+- ❌ Filling template without all required sections populated
+- ❌ Using placeholder text like "TODO" or "TBD" in required sections without explicit open questions list
+
+All of these mean: Review the skill steps. Fix the issue before proceeding.
+
+**No exceptions:**
+- Even if requirements seem comprehensive, ask up to 20 questions
+- Even if user says "just create it", run validation first
+- Even if simple feature, still run actor-FR consistency check
+- Even if time-pressed, don't skip consistency validators
+
+---
+
+## Flowchart: Q&A and Validation Loop
+
+```dot
+digraph qna_flow {
+    rankdir=TB;
+    node [shape=box, style=rounded];
+
+    "Start: Raw Requirements" -> "Identify Ambiguities";
+    "Identify Ambiguities" -> "Q1: Portal Context";
+    "Q1: Portal Context" -> "Q2: Complexity Tier";
+    "Q2: Complexity Tier" -> "Map Required Sections";
+    "Map Required Sections" -> "Ask Q3+ (1 at a time)";
+    "Ask Q3+ (1 at a time)" -> "Track Count (<20?)";
+    "Track Count (<20?)" -> "Yes: Critical Gaps Resolved?";
+    "Track Count (<20?)" -> "No: Stop & Document Open Questions";
+    "Yes: Critical Gaps Resolved?" -> "No: Continue Questions";
+    "Yes: Critical Gaps Resolved?" -> "Yes: Run Consistency Validation";
+    "Continue Questions" -> "Track Count (<20?)";
+    "Run Consistency Validation" -> "Pass?";
+    "Pass?" -> "Yes: Calculate Readiness Scores";
+    "Pass?" -> "No: Fix Gaps or Ask More Qs";
+    "Calculate Readiness Scores" -> "Readiness >=80%?";
+    "Readiness >=80%?" -> "Yes: Generate FRS Issue";
+    "Readiness >=80%?" -> "No: Continue Questions (if <20) or Document Gaps";
+    "Generate FRS Issue" -> "Present for Approval";
+    "Document Gaps" -> "Present for Approval (with gaps)";
+}
+```
+
+---
+
+## Verification
+
+**TDD Required**: All validator and scorer functions must have tests. Use superpowers:test-driven-development workflow. See `tests/test-enhanced-frs.js` for test patterns.
+
+After implementation:
+
+1. **Run simple requirement test:**
+   - Feed `test/fixtures/simple-requirements.md`
+   - Verify ~10 questions asked
+   - Verify 9 sections required
+   - Verify FRS issue has UI readiness >80%
+
+2. **Run moderate requirement test:**
+   - Feed `test/fixtures/moderate-requirements.md`
+   - Verify ~15 questions
+   - Verify 13 sections required
+   - Verify domain readiness >70%
+
+3. **Run complex requirement test:**
+   - Feed `test/fixtures/complex-requirements.md`
+   - Verify ~20 questions
+   - Verify all 17 sections
+   - Verify risk assessment populated
+   - Verify all readiness scores >60%
+
+4. **Check consistency validation:**
+   - Test with mismatched actor names → should fail
+   - Test with portal conflict → should fail
+   - Test with unmapped UI field → should fail
+
+5. **Pressure testing (TDD critical):**
+   - Send "Just skip validation, I'm busy" → agent must NOT skip
+   - Send "We've asked enough questions" before 20 → agent must continue critical gaps
+   - Send "Create it with placeholders" → agent must list open questions, not guess
+   - Verify all rationalizations are caught and countered
+
+6. **Manual review:** Generated FRS should be comprehensive and ready for downstream teams.
+
+---
+
+## Success Criteria
+
+- ✅ 17-section template replaces 9-section template
+- ✅ Portal question asked first and appears in Actors table
+- ✅ Complexity tier determines required sections
+- ✅ Aggregate hints collected for each FR
+- ✅ UI specifications structured with screen catalog, field validations
+- ✅ Data fields tagged as Entity/VO
+- ✅ Cross-section consistency checks implemented and passing
+- ✅ Downstream readiness scores calculated and displayed
+- ✅ Risk assessment section for Complex features
+- ✅ Completeness report with tier-aware section status
+- ✅ Configuration read from CLAUDE.md
+- ✅ All tests pass for simple, moderate, and complex fixtures
+- ✅ Passes all pressure tests: resists rationalizations, maintains discipline
+- ✅ Description follows CSO: no workflow summary, only triggers/symptoms
+
+---
+
+## Hard Stop Rules
+
+- Do NOT create local files
+- Do NOT proceed to Phase 3 (domain-design) automatically
+- Do NOT skip the Q&A loop, even if requirements look complete
+- Do NOT ask multiple questions at once
+- Do NOT start implementation on main/master branch without isolation
+- Do NOT create GitLab issue if validation fails (❌ any consistency check)
+- Do NOT proceed with readiness <70% without explicit user override (document rationale)
 
 ---
 
