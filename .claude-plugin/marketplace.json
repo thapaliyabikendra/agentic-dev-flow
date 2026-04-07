@@ -54,57 +54,6 @@
         "semantic-search",
         "sdlc",
         "ai-assistant"
-      ],
-      "skills": [
-        {
-          "name": "wiki",
-          "description": "Transform raw data into structured, queryable knowledge. Supports ingestion, synthesis, querying, cleanup, and knowledge expansion.",
-          "usage": "/wiki ingest | absorb [date-range] | query <question> | cleanup | breakdown | status",
-          "capabilities": [
-            "multi-format-ingestion",
-            "semantic-compilation",
-            "article-generation",
-            "pattern-detection",
-            "relationship-mapping",
-            "contextual-querying",
-            "knowledge-cleanup",
-            "auto-structuring"
-          ],
-          "commands": [
-            {
-              "name": "ingest",
-              "description": "Normalize raw data into structured markdown entries with metadata."
-            },
-            {
-              "name": "absorb",
-              "description": "Synthesize entries into coherent, context-rich wiki articles."
-            },
-            {
-              "name": "query",
-              "description": "Answer questions using synthesized knowledge across the wiki."
-            },
-            {
-              "name": "cleanup",
-              "description": "Improve article quality, structure, and internal linking."
-            },
-            {
-              "name": "breakdown",
-              "description": "Detect gaps and generate new articles from patterns and references."
-            },
-            {
-              "name": "status",
-              "description": "Display ingestion progress, coverage, and knowledge metrics."
-            }
-          ],
-          "principles": [
-            "Synthesize meaning, not just store data",
-            "Ensure all data becomes usable knowledge",
-            "Prioritize relationships over rigid categorization",
-            "Evolve structure dynamically",
-            "Maintain narrative coherence",
-            "Favor depth and insight over volume"
-          ]
-        }
       ]
     }
   ]
