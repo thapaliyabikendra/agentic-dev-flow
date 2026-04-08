@@ -36,13 +36,13 @@
       "name": "agentic-wiki",
       "version": "1.0.0",
       "description": "Knowledge system plugin for ingesting data, synthesizing structured knowledge, and enabling semantic querying across workflows.",
-      "source": "./plugins/agentic-wiki",
+      "source": "./plugins/wiki",
       "author": {
         "name": "Bikendra Thapaliya",
         "email": "thapaliyabikendra@gmail.com"
       },
       "license": "MIT",
-      "homepage": "https://github.com/thapaliyabikendra/agentic-dev-flow/tree/main/plugins/agentic-wiki",
+      "homepage": "https://github.com/thapaliyabikendra/agentic-dev-flow",
       "repository": "https://github.com/thapaliyabikendra/agentic-dev-flow",
       "category": "productivity",
       "keywords": [

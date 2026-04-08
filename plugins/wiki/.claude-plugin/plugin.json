@@ -4,10 +4,10 @@
   "description": "Agentic wiki plugin for ingesting data, synthesizing structured knowledge, and enabling semantic querying across workflows.",
   "author": {
     "name": "Bikendra Thapaliya",
-    "email": "thapaliyabikendra@users.noreply.github.com",
+    "email": "thapaliyabikendra@gmail.com",
     "url": "https://github.com/thapaliyabikendra"
   },
-  "homepage": "https://github.com/thapaliyabikendra/agentic-dev-flow/tree/main/plugins/agentic-wiki",
+  "homepage": "https://github.com/thapaliyabikendra/agentic-dev-flow",
   "repository": "https://github.com/thapaliyabikendra/agentic-dev-flow",
   "license": "MIT",
   "category": "productivity",
@@ -22,56 +22,5 @@
     "semantic-search",
     "sdlc",
     "ai-assistant"
-  ],
-  "skills": [
-    {
-      "name": "wiki",
-      "description": "Build and manage a structured knowledge system from raw inputs. Supports ingestion, synthesis, querying, cleanup, and expansion.",
-      "usage": "/wiki ingest | absorb [date-range] | query <question> | cleanup | breakdown | status",
-      "capabilities": [
-        "multi-format-ingestion",
-        "semantic-knowledge-synthesis",
-        "wiki-article-generation",
-        "pattern-detection",
-        "relationship-mapping",
-        "contextual-querying",
-        "knowledge-cleanup",
-        "auto-structuring"
-      ],
-      "commands": [
-        {
-          "name": "ingest",
-          "description": "Convert raw data sources into normalized markdown entries with metadata."
-        },
-        {
-          "name": "absorb",
-          "description": "Compile entries into structured wiki articles with contextual understanding."
-        },
-        {
-          "name": "query",
-          "description": "Answer questions by synthesizing knowledge from the wiki."
-        },
-        {
-          "name": "cleanup",
-          "description": "Audit and improve article quality, structure, and linking."
-        },
-        {
-          "name": "breakdown",
-          "description": "Identify missing topics and generate new articles from patterns and references."
-        },
-        {
-          "name": "status",
-          "description": "Show ingestion progress, article stats, and knowledge coverage."
-        }
-      ],
-      "principles": [
-        "Synthesize meaning, not just store data",
-        "Ensure all data becomes usable knowledge",
-        "Prioritize relationships over categorization",
-        "Evolve structure dynamically",
-        "Maintain narrative coherence",
-        "Favor depth and insight over volume"
-      ]
-    }
   ]
 }
