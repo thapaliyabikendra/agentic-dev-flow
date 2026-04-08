@@ -169,6 +169,23 @@ One task per source FRS. Ordered by dependency.
 
 ---
 
+## Pre-Delegation Checklist
+
+Before a FEAT may advance from `review` to `approved` (delegatable to BEA), the BA must verify all six criteria. A FEAT failing any criterion must remain in `draft` or `review`. The agent cannot approve on behalf of BA.
+
+| # | Criterion | Pass Condition | Fail Signal |
+|---|-----------|---------------|-------------|
+| 1 | **One FRS per task** | Each task maps to exactly one FRS; no compound tasks combining multiple use cases | A task has multiple `Source:` wikilinks pointing to independent FRS documents |
+| 2 | **No vague verbs** | Acceptance criteria use precise, measurable language | Criteria contain "improve", "handle", "support", "manage", "ensure", or similar unmeasurable verbs |
+| 3 | **Falsifiable acceptance criteria** | Every criterion can be demonstrated pass/fail by an automated or manual test run | Criterion cannot be expressed as a Given/When/Then or a verifiable checklist item |
+| 4 | **Shadow QA linked, not copied** | Every task's Shadow QA section contains only `→ [[FLOW-{ID}#Shadow-QA]]` wikilinks | Any literal scenario text appears in the FEAT body (LINT: `shadow_qa_drift`) |
+| 5 | **No class names or file paths** | FEAT is implementation-agnostic at approval time | Body contains class names, method names, file paths, or framework-specific identifiers |
+| 6 | **Explicit dependency order** | All tasks with upstream dependencies list them in `Depends on:` with ordering rationale | A task with a logical predecessor has `Depends on: —` with no justification |
+
+**Usage:** BA checks each row before signing `status: approved`. Any row marked ✗ is a blocking condition. Record failed criteria in `## Open Questions` with the BA name and date.
+
+---
+
 ## Schema Rules
 
 - **Status Lifecycle:** `draft → review → approved → implemented`. Or terminal: `rejected` (requires `rejected_reason`) or `superseded` (requires `superseded_by`). LINT: `terminal_state_bypass` if terminal state without required field.
@@ -192,6 +209,7 @@ One task per source FRS. Ordered by dependency.
 | `linked_flows` missing | No test source | Add FLOW IDs that provide Shadow QA |
 | status=`approved` by Agent | `role_boundary_bypass` | BA must approve; Agent can only set `draft`/`rejected` |
 | No `rejected_reason` on rejected | LINT `terminal_state_bypass` | Populate with BA rationale |
+| Approved without Pre-Delegation Checklist | `pre_delegation_checklist_incomplete` | BA must verify all 6 criteria before setting `approved`; record failures in Open Questions |
 
 ---
 
@@ -349,3 +367,4 @@ OrderCancellation flow and its supporting command.
 - `role_boundary_bypass` — `status=approved` set by non-BA agent
 - `stale_feature_spec` — FEAT has not been updated while source FRS changed (checksum mismatch)
 - `traceability_gap` — `source_frs` empty or points to non-existent FRS
+- `pre_delegation_checklist_incomplete` — FEAT advanced to `approved` without all 6 Pre-Delegation Checklist criteria satisfied (see `## Pre-Delegation Checklist`)

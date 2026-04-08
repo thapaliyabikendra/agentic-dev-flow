@@ -29,6 +29,7 @@ source_frs: "[[FRS-{ID}]]"
 linked_commands: ["[[CMD-{ID}]]"]
 linked_entities: ["[[ENT-{ID}]]"]
 linked_actors: ["[[ACT-{ID}]]"]
+scenario_gap: false
 ---
 ```
 
@@ -77,6 +78,7 @@ Logic gate is {STRICT|OPTIMISTIC}: {consequence if a step fails}.
 | `linked_actors` | Yes | Array of ACT- IDs who participate | `["[[ACT-Customer]]"]` |
 | `deprecated_by` | No | If set, triggers deprecation propagation | `FLOW-OrderFulfillmentV2` |
 | `deprecation_note` | Conditional | Required if deprecated | `"Split into separate payment and fulfillment flows"` |
+| `scenario_gap` | No | `true` if any Shadow QA scenario slot is missing or unfilled; `false` (default) if all three scenarios are present. When `true`, COMPILE is **hard-blocked** for this flow's module until BA supplies the missing scenarios and resets to `false`. Agent sets this flag during ABSORB when it cannot author a complete Shadow QA section from the available FRS. | `false` |
 
 ---
 
@@ -105,6 +107,7 @@ Logic gate is {STRICT|OPTIMISTIC}: {consequence if a step fails}.
 ## Schema Rules
 
 - **Shadow QA Ownership:** Shadow QA scenarios **MUST** be in the Flow body. Feature Specs reference this section by wikilink (e.g., `→ [[FLOW-XXX#Shadow-QA]]`). LINT violation `shadow_qa_drift` if any FEAT contains literal Shadow QA text instead of wikilink.
+- **Scenario Gap Gate:** If ABSORB cannot produce a complete Shadow QA section (all three scenarios: Happy Path, Edge Case, Fault Path) from the available FRS, it must set `scenario_gap: true` on the FLOW node and note which scenarios are missing in the body under `## Shadow QA`. This flag is a **hard gate blocking COMPILE** for the entire module — COMPILE will not proceed until BA supplies the missing scenarios and resets `scenario_gap: false`. Agent must never fabricate placeholder scenarios to clear the flag. LINT class: `scenario_gap_present`.
 - **Version Drift:** Each command in Sequence may note `Requires min vX.Y.Z`. When a linked CMD or ENT version bumps, check all Flows referencing it. If new version > pinned min_version, create CNF- node (`conflict_class: version_drift`). This is blocking.
 - **Logic Gate Consistency:** STRICT flows require all steps to succeed or rollback. OPTIMISTIC flows allow partial success but must define compensation logic in body. LINT checks that compensation is documented for OPTIMISTIC flows.
 - **Command Order:** Commands in `linked_commands` must appear in the Sequence section in the same order. LINT: out-of-order = `decomposition_violation`.
@@ -122,6 +125,8 @@ Logic gate is {STRICT|OPTIMISTIC}: {consequence if a step fails}.
 | Logic gate STRICT but no rollback plan | Failed steps leave inconsistent state | Define explicit rollback in Sequence or switch to OPTIMISTIC with compensation |
 | Command in Sequence not in linked_commands | LINT `decomposition_violation` | Add to `linked_commands` or remove from Sequence |
 | Actor not in linked_actors | LINT `missing_actor` | Add actor to `linked_actors` frontmatter |
+| Incomplete Shadow QA with no `scenario_gap` flag | Missing scenarios silently pass through; COMPILE proceeds on incomplete test coverage | Set `scenario_gap: true` and note missing scenarios; BA must supply before COMPILE |
+| Fabricating placeholder scenarios to clear `scenario_gap` | Untestable scenarios enter the test evidence chain; stale TRUN evidence | Never fabricate — leave `scenario_gap: true` and await BA input |
 
 ---
 
@@ -141,6 +146,7 @@ source_frs: "[[FRS-UC-003]]"
 linked_commands: ["[[CMD-ValidateCart]]", "[[CMD-PlaceOrder]]", "[[CMD-CapturePayment]]", "[[CMD-ReserveInventory]]"]
 linked_entities: ["[[ENT-Cart]]", "[[ENT-Order]]", "[[ENT-Payment]]", "[[ENT-Inventory]]"]
 linked_actors: ["[[ACT-Customer]]"]
+scenario_gap: false
 ---
 # FLOW-OrderFulfillment
 
@@ -217,3 +223,4 @@ in reverse order. Customer sees the specific error from the failing command.
 - `broken_state` — Entity states mentioned but no linked STATE- node defines those states
 - `missing_module_registration` — Module not registered
 - `logic_conflict` — STRICT flow contains non-compensating fault path (may indicate should be OPTIMISTIC)
+- `scenario_gap_present` — `scenario_gap: true` is set; one or more Shadow QA scenarios are missing; COMPILE is blocked for this module until BA supplies missing scenarios and resets the flag

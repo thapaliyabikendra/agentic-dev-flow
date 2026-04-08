@@ -24,8 +24,9 @@ version: "1.0.0"
 milestone: {M}
 status: pass | fail | blocked
 ephemeral: false
-sign_off_by: "QA-Name"
-sign_off_at: "YYYY-MM-DDTHH:MM:SSZ"
+pipeline_status: pass | fail | pending
+sign_off_by: ""         # populated ONLY by `sign <trun-id>` (Developer role); not set by generate testrun
+sign_off_at: ""         # ISO8601 timestamp; set atomically with sign_off_by; immutable after write
 testplan_ref: "[[TPLAN-{ID}]]"
 gitlab_ci_url: "https://gitlab.com/.../pipelines/..."
 ---
@@ -67,11 +68,12 @@ module: {Module}
 milestone: {M}
 status: pass | fail | blocked
 ephemeral: false
-sign_off_by: ""  # QA lead username
-sign_off_at: ""  # ISO8601 timestamp
+pipeline_status: pass | fail | pending   # CI pipeline result; independent of sign_off_by
+sign_off_by: ""          # Developer username; set ONLY by `sign <trun-id>`; NOT set by generate testrun; immutable after write
+sign_off_at: ""          # ISO8601; set atomically with sign_off_by by SIGN operation; immutable after write
 testplan_ref: "[[TPLAN-{ID}]]"
-tplan_snapshot_ref: ""  # timestamp from TPLAN when run started
-gitlab_ci_url: ""  # optional but recommended
+tplan_snapshot_ref: ""   # timestamp from TPLAN when run started
+gitlab_ci_url: ""        # optional but strongly recommended
 ---
 ```
 
@@ -145,15 +147,18 @@ to have edge case (see DFB-20250407-002). Fix scheduled for M3. Risk accepted fo
 - `stale_artifact` — `tplan_snapshot_ref` older than TPLAN modification (trun against outdated TPLAN)
 - `broken_reference` — `testplan_ref` points to non-existent TPLAN
 - `tplan_currency_rule` — TPLAN stale relative to covered nodes (should be regenerated before TRUN)
-- `role_boundary_bypass` — Non-QA user sets `sign_off_by` (should be QA lead)
+- `role_boundary_bypass` — Non-Developer principal sets `sign_off_by` (only Developer role may sign via `sign <trun-id>`; Architects and BAs may not)
 - `ephemeral_mismatch` — `ephemeral: false` required; TRUN is durable
 
 ---
 
 ## Usage Notes
 
-- **Sign-off is mandatory for milestone closure:** Milestone close gate checks that at least one TRUN with `status=pass` and valid `sign_off_by` exists for every FEAT in the milestone.
+- **Gate 4 requires two independent conditions:** `pipeline_status: pass` (CI result, automated) AND `sign_off_by` non-empty (developer attestation, manual). These are separate fields for separate purposes. A green pipeline without a developer signature does not satisfy Gate 4.
+- **`sign_off_by` is set exclusively by `sign <trun-id>`:** The `generate testrun` command produces a TRUN with `sign_off_by: ""`. The developer must separately run `sign <trun-id>` (see `SIGN.md`). No other operation may write this field.
+- **Developer role only:** Only a Developer-role principal may run `sign <trun-id>`. Architects and BAs may not sign TRUNs. LINT class `role_boundary_bypass` fires if `sign_off_by` is populated by a non-Developer.
+- **`sign_off_by` and `sign_off_at` are immutable after write:** Once signed, these fields cannot be modified. To invalidate a signed TRUN, create a CNF- node (`conflict_class: rule_violation`), have BA resolve, and generate a new TRUN.
 - **TRUNs are never overwritten:** If you need to correct a TRUN after sign-off, create a new TRUN (increment N) and reference the original in a note. Do not modify.
-- **Link to CI:** Populate `gitlab_ci_url` to trace test execution to automated pipeline run (if applicable). Manual tests may omit.
-- **Waivers:** If some scenarios fail but milestone closure is still warranted (risk accepted), document waiver rationale in the Sign-Off section and set status=`pass` with note. Avoid `status=fail` if milestone is closing; use waiver process instead.
-- **TPLAN Currency:** Before running `GENERATE testrun`, ensure TPLAN is not stale (compare `wiki_snapshot_ref` to latest node modifications). If stale, regenerate TPLAN first.
+- **Link to CI:** Populate `gitlab_ci_url` to trace test execution to automated pipeline run (strongly recommended). Manual tests may omit.
+- **Waivers:** If some scenarios fail but milestone closure is still warranted (risk accepted), document waiver rationale in the Sign-Off section and set `pipeline_status: pass` with note. Always set `status` accurately — use the waiver process rather than misrepresenting test results.
+- **TPLAN Currency:** Before running `generate testrun`, ensure TPLAN is not stale (compare `wiki_snapshot_ref` to latest node modifications). If stale, regenerate TPLAN first.

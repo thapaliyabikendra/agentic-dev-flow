@@ -7,7 +7,7 @@ Marks a Feature Spec as implemented. Triggered by BA after GitLab issue closed a
 ## Preconditions
 
 - `FEAT-{ID} → status: approved` (must be approved first)
-- At least one TRUN with `status: pass` and `sign_off_by` populated exists for this feature.
+- At least one TRUN with `status: pass` and `sign_off_by` populated exists for this feature. The `sign_off_by` field is populated exclusively by the `sign <trun-id>` operation (see `SIGN.md`) — it is not set by `generate testrun`. A passing CI pipeline without a developer signature does not satisfy this precondition.
 
 ## Procedure
 
@@ -23,6 +23,7 @@ Marks a Feature Spec as implemented. Triggered by BA after GitLab issue closed a
 The BA issues this command. The Agent executes it. Neither may mark a feature implemented without passing test evidence (gate in step 2).
 
 ## See Also
+`SIGN.md` — Developer sign-off operation that satisfies the TRUN precondition
 `SUPERSEDE.md` — Replacing a feature instead of implementing
 `GENERATE.md` — APIDOC generation
 `SCHEMAS.md` — TRUN- and FEAT- node schemas

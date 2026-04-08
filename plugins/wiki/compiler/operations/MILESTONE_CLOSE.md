@@ -12,7 +12,7 @@ Formally close a milestone, verifying all 6 completion gates before archiving.
 
 3. **DFB gate:** All DFB- nodes targeting features in milestone M have `status: resolved` or `rejected`. Any `status: open` or `acknowledged` DFB is blocking.
 
-4. **Test run gate:** Each `implemented` FEAT has at least one TRUN with `status: pass` and `sign_off_by` populated. Missing TRUNs or unsigned runs are blocking.
+4. **Test run gate:** Each `implemented` FEAT has at least one TRUN satisfying **both** conditions: `pipeline_status: pass` **and** `sign_off_by` populated (non-empty). These are independent requirements — a passing pipeline without a developer signature does not satisfy this gate. The `sign_off_by` field is set exclusively by the `sign <trun-id>` operation (see `SIGN.md`). Missing TRUNs, failed pipeline status, or unsigned TRUNs are all blocking.
 
 5. **Changelog gate:** If no published CHGLOG exists for milestone M, trigger `generate changelog M` and prompt for review before proceeding.
 
@@ -32,4 +32,5 @@ Upon all gates passing:
 - `LINT.md` — Debt audit (gates 1-3 use LINT checks)
 - `GENERATE.md` — APIDOC and CHGLOG generation (gates 5-6)
 - `IMPLEMENT.md` — TRUN requirement (gate 4)
+- `SIGN.md` — Developer sign-off operation that satisfies the Gate 4 TRUN signature requirement
 - `SCHEMAS.md` — MILESTONE schema in `modules.md`

@@ -1,6 +1,6 @@
 # G. LINT
 
-Full 28-class debt audit across the knowledge graph.
+Full 30-class debt audit across the knowledge graph.
 
 **Command form:** `/compiler lint`
 
@@ -8,7 +8,7 @@ Full 28-class debt audit across the knowledge graph.
 
 Scan the full graph. Produce a structured debt report.
 
-## Debt Classes (28)
+## Debt Classes (30)
 
 | Debt Class | Detection Rule |
 |-----------|----------------|
@@ -21,7 +21,7 @@ Scan the full graph. Produce a structured debt report.
 | **Stale Conflicts** | CNF- nodes `status: pending` with no log activity for 14+ days — escalate to BA |
 | **Missing Pages** | Concepts appearing in 2+ node bodies without their own node file |
 | **Data Gaps** | Areas where a new FRS could fill an obvious domain model hole |
-| **Uncompiled FRS** | FRS with `INGEST` in log but no `COMPILE` for its module/milestone after 7 days |
+| **Uncompiled FRS** | FRS with `INGEST` in log but no `ABSORB` for its staging entry after 7 days, OR `ABSORB` complete but no `COMPILE` for its module/milestone after 7 days |
 | **Stale Feature Specs** | FEAT nodes `status: review` for 14+ days with no BA activity — excludes `rejected`, `superseded`, `approved`, `implemented` |
 | **Decomposition Violations** | FEAT nodes citing >5 source FRS with no explicit rationale in body |
 | **Ephemeral Drift** | TPLAN `wiki_snapshot_ref` predates last modification of any covered node |
@@ -41,6 +41,8 @@ Scan the full graph. Produce a structured debt report.
 | **Topology Gap** | Module with 2+ INT- nodes but no TOPO- output file and no ARCH- node |
 | **Unclosed Milestones** | Milestones where all FEAT nodes are `implemented` but no `MILESTONE_CLOSE` log entry exists |
 | **Missing GLOSS** | DDD-specific terms appearing in 3+ node bodies with no corresponding GLOSS- node |
+| **Index Entry Missing** | A node file exists under `docs/` but has no corresponding entry in `index.md`. Every INGEST, ABSORB, and SYNTHESIZE operation must write through to `index.md` as its final step; absence is a structural violation that makes the node invisible to scoped QUERY searches |
+| **Scenario Gap Present** | A FLOW- node has `scenario_gap: true` set in its frontmatter. This is a hard gate blocking COMPILE for the affected module — BA must supply missing scenario slots before any Feature Spec can be compiled from that module's FRS set. Not a warning; surfaces in COMPILE precondition check |
 
 ## Output
 

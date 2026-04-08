@@ -6,9 +6,10 @@ Aggregate FRS documents into a dependency-ordered Feature Spec with Shadow QA re
 
 ## Preconditions
 
-- All FRS for the target module/milestone must appear in `log.md` with `INGEST` entries. Missing → halt.
+- All FRS for the target module/milestone must appear in `log.md` with both `INGEST` **and** `ABSORB` entries. Staged-only (INGEST without ABSORB) → halt.
 - No open `CNF-` nodes blocking the module/milestone.
 - `snapshot.md → dirty` must be `false` (fresh BOOT required).
+- **Scenario gap gate (hard):** Every FLOW- node in the target module must have `scenario_gap: false` (or the field absent). Any FLOW with `scenario_gap: true` is a blocking condition — BA must supply the missing scenario slots before COMPILE can proceed. Surface the list of blocking flows and halt. This gate cannot be bypassed.
 
 ## Procedure
 
@@ -33,8 +34,10 @@ Aggregate FRS documents into a dependency-ordered Feature Spec with Shadow QA re
 See `COMPILE_REJECT.md` for the `/compiler reject <feat-id> "<reason>"` command.
 
 ## See Also
+- `INGEST.md` — Stage FRS (phase 1 of ingestion pipeline)
+- `ABSORB.md` — Compile staged FRS to DDD nodes (phase 2; must complete before COMPILE)
 - `COMPILE_REJECT.md` — Rejection workflow
 - `ISSUE.md` — Creating GitLab Issue after approval
 - `SCHEMAS.md` — FEAT- node schema
-- `node-definitions/FEAT.md` — Feature Spec template
+- `node-definitions/FEAT.md` — Feature Spec template (includes Pre-Delegation Checklist)
 - `templates/BA_REVIEW_PROMPT.md` — BA review prompt template

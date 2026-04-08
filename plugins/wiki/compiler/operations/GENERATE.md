@@ -12,9 +12,13 @@ Load the Feature Spec and all linked Flow bodies (`#Shadow-QA` sections) and Sta
 
 ### `generate testrun <tplan-id>`
 
-Create a `TRUN-{TPLAN-ID}-{N}.md` scaffold using `node-definitions/TRUN.md` (auto-incrementing run number). Verify the source TPLAN is not stale — if `wiki_snapshot_ref` predates any covered node's last modification, halt and prompt to regenerate the TPLAN first. Pre-populate scenario rows from the TPLAN. Set `status: pending`. Log as `GENERATE | TRUN | {TPLAN-ID}`.
+Create a `TRUN-{TPLAN-ID}-{N}.md` scaffold using `node-definitions/TRUN.md` (auto-incrementing run number). Verify the source TPLAN is not stale — if `wiki_snapshot_ref` predates any covered node's last modification, halt and prompt to regenerate the TPLAN first. Pre-populate scenario rows from the TPLAN. Set `status: pending`. Set `sign_off_by: ""` (empty) — **this operation does not sign the TRUN**.
 
-**Key:** Durable, versioned. Requires `sign_off_by` for milestone closure.
+**The developer must separately run `sign <trun-id>` after pipeline execution to populate `sign_off_by`.** A TRUN with `pipeline_status: pass` but no `sign_off_by` does not satisfy Gate 4. The signing action is documented in `SIGN.md`.
+
+Log as `GENERATE | TRUN | {TPLAN-ID}`.
+
+**Key:** Durable, versioned. Requires `sign_off_by` (via `sign <trun-id>`) for milestone closure.
 
 ### `generate apidoc <version>`
 
@@ -43,3 +47,4 @@ Collect all Feature Specs for the milestone with `status: implemented`. Collect 
 - `node-definitions/TOPO.md` — Topology template
 - `node-definitions/CHGLOG.md` — Changelog template
 - `SCHEMAS.md` — TPLAN-, TRUN-, APIDOC-, CHGLOG-, TOPO- node schemas
+- `SIGN.md` — Developer sign-off operation (required after `generate testrun`)
