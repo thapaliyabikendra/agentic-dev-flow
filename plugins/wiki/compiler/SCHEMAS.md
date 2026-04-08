@@ -12,7 +12,7 @@
 | UI Spec / View-Model | VM- | 10_UI_Specs/ | Frontend mapping | `linked_entities`, `linked_commands` |
 | Conflict | CNF- | 99_Conflicts/ | Blocking contradiction | `conflict_class`; BA resolution required |
 | Synthesis | SYN- | 12_Synthesis/ | Query result/insight | `source_role`; cross-module; terminal states |
-| Feature Spec | FEAT- | 13_FeatureSpecs/ | Implementation plan | Status lifecycle (`draft→review→approved→implemented`); Shadow QA references only |
+| Feature Spec | FEAT- | 13_FeatureSpecs/ | Implementation plan | Status lifecycle (`draft→review→approved→implemented`); Shadow QA references only; **pre-delegation quality gate** (6 criteria — see `node-definitions/FEAT.md ## Pre-Delegation Checklist`) |
 | Test Plan | TPLAN- | 14_Outputs/testplans/ | Ephemeral test scenarios | `ephemeral: true`; `wiki_snapshot_ref`; stale detection |
 | Test Run | TRUN- | 14_Outputs/testruns/ | Durable QA sign-off | `ephemeral: false`; `sign_off_by` required for milestone gate |
 | API Release Doc | APIDOC- | 14_Outputs/apidocs/ | Versioned API spec | Never overwrite once `published`; deprecation via `deprecated_by` |
@@ -64,7 +64,28 @@
 
 DEC-, SYN-, and ARCH- nodes are intentionally cross-module and carry **no `module:` field**. The LINT `Missing Module Registration` rule is **exempt** for these types. In `home.md` they are listed under the `## Cross-Module` section.
 
-### Deprecation Propagation Rule (Shared)
+### index.md Write-Through (All Node-Creating Operations)
+
+**Applies to:** Every operation that creates or removes a node — INGEST, ABSORB, SYNTHESIZE, COMPILE, GENERATE (durable artifacts), RESOLVE CNF (when closing), MILESTONE CLOSE.
+
+As the **final step** before updating `snapshot.md`, every node-creating operation must write a corresponding entry to `index.md`. A node file present in `docs/` but absent from `index.md` is a lint violation (`index_entry_missing`) and is invisible to scoped QUERY searches.
+
+**Rule:** Write node to filesystem → write entry to `index.md` → update `snapshot.md`. Never reorder these three steps.
+
+### Feature Spec Pre-Delegation Quality Gate
+
+**Applies to:** FEAT- nodes before status may advance to `approved` (delegatable to BEA).
+
+Before a FEAT is marked `approved`, the BA must verify all six criteria (defined in `node-definitions/FEAT.md ## Pre-Delegation Checklist`):
+
+1. **One FRS per task** — Each task maps to exactly one FRS; no compound tasks.
+2. **No vague verbs** — Acceptance criteria use precise, measurable language (no "improve", "handle", "support").
+3. **Falsifiable acceptance criteria** — Each criterion can be demonstrated pass/fail by a test run.
+4. **Shadow QA linked, not copied** — FEAT body references `FLOW-{id} → ## Shadow QA`; no scenario text duplicated.
+5. **No class names or file paths** — FEAT must be implementation-agnostic at approval time.
+6. **Explicit dependency order** — FEATs with upstream dependencies list them with ordering rationale.
+
+A FEAT that fails any criterion must remain in `draft` or `review`. Agent cannot approve on behalf of BA. The checklist must appear as a frontmatter or body section in each FEAT instance — see `node-definitions/FEAT.md` for the template.
 
 **Applies to:** ENT-, CMD-, DEC-, and CONV- nodes.
 

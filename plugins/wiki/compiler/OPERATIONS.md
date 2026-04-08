@@ -35,16 +35,20 @@ Append to log.md, update home.md, rebuild snapshot.md.
 | Command | Procedure File | Summary |
 |---------|----------------|---------|
 | `boot` | `BOOT.md` | Load snapshot, recover if dirty, surface pending work |
-| `ingest <frs-id>` | `INGEST.md` | FRS → DDD nodes with active defense |
+| `boot --brownfield` | `INIT_BROWNFIELD.md` | First-run brownfield init: scan source docs, extract implicit nodes, populate index.md, build baseline snapshot |
+| `ingest <frs-id>` | `INGEST.md` | FRS → staging (metadata only, reversible) |
+| `absorb [<frs-id>]` | `ABSORB.md` | Staging → DDD nodes; conflict-aware compilation pass; can halt mid-batch |
 | `compile <module>` | `COMPILE.md` | DDD → Feature Spec with BA review |
 | `reject <feat-id>` | `COMPILE_REJECT.md` | Mark Feature Spec rejected |
 | `issue <feat-id>` | `ISSUE.md` | Feature Spec → GitLab Issue body |
 | `implement <feat-id>` | `IMPLEMENT.md` | Mark Feature Spec implemented (requires TRUN) |
 | `supersede <old> <new>` | `SUPERSEDE.md` | Replace old FEAT with new |
+| `synthesize <note>` | `SYNTHESIZE.md` | File cross-cutting insight as SYN- node (3-bar quality gate) |
 | `query [options] <q>` | `QUERY.md` | Wiki synthesis (scoped/full) |
 | `query archaeology <id>` | `ARCHAEOLOGY.md` | Chronological evolution trace |
 | `generate testplan <feat>` | `GENERATE.md` | Wiki → ephemeral Test Plan |
-| `generate testrun <tplan>` | `GENERATE.md` | TPLAN → durable Test Run |
+| `generate testrun <tplan>` | `GENERATE.md` | TPLAN → durable Test Run (unsigned; developer must sign) |
+| `sign <trun-id>` | `SIGN.md` | Developer populates `sign_off_by` on a TRUN (Gate 4 prerequisite) |
 | `generate apidoc <ver>` | `GENERATE.md` | Wiki → versioned API Doc |
 | `generate topology <mod>` | `GENERATE.md` | Wiki → Mermaid topology |
 | `generate changelog <M>` | `GENERATE.md` | Wiki → audience-scoped changelog |
@@ -59,10 +63,12 @@ Append to log.md, update home.md, rebuild snapshot.md.
 
 ### Startup & Recovery
 - **`BOOT.md`** — Session initialization, snapshot validation, pending work surfacing
+- **`INIT_BROWNFIELD.md`** — **One-time** brownfield initialization: scans existing source documents, extracts implicit nodes, populates `index.md`, builds snapshot from baseline. Distinct from `ARCHAEOLOGY` (which is a query-time operation). Triggered via `boot --brownfield` on first run only.
 - **`RECOVER.md`** — Auto-triggered snapshot rebuild when dirty or stale
 
 ### Ingestion & Compilation
-- **`INGEST.md`** — Parse FRS documents into DDD nodes (ACT-, ENT-, CMD-, FLOW-, etc.)
+- **`INGEST.md`** — Parse FRS document into staging area (fast, cheap, reversible — metadata only; no DDD nodes written yet)
+- **`ABSORB.md`** — Compile staging entries to DDD nodes (ACT-/ENT-/CMD-/FLOW- etc.); conflict-aware; can halt mid-batch if a CNF changes the domain model, allowing earlier entries to be re-evaluated; provides clean rollback guarantee
 - **`COMPILE.md`** — Aggregate FRS into Feature Specs with dependency ordering
 - **`COMPILE_REJECT.md`** — Reject a Feature Spec (terminal state)
 
@@ -73,11 +79,13 @@ Append to log.md, update home.md, rebuild snapshot.md.
 
 ### Query & Synthesis
 - **`QUERY.md`** — General architecture queries (scoped by module/milestone/node type)
-- **`ARCHAEOLOGY.md`** — Chronological evolution of a node or FRS impact
+- **`ARCHAEOLOGY.md`** — Chronological evolution of a node or FRS impact (query-time trace only; for brownfield system initialization see `INIT_BROWNFIELD.md`)
+- **`SYNTHESIZE.md`** — File a cross-cutting insight as a SYN- node; enforces 3-bar quality gate (two distinct nodes, non-obvious connection, falsifiable/actionable) and prompts before filing
 - **`GENERATE.md`** — Generate artifacts: testplan, testrun, apidoc, topology, changelog
 
 ### Quality & Closure
 - **`LINT.md`** — Comprehensive 28-class debt audit
+- **`SIGN.md`** — Developer signing action: populates `sign_off_by` on a TRUN node; a TRUN with `pipeline_status: pass` but no `sign_off_by` does **not** satisfy Gate 4
 - **`RESOLVE_CNF.md`** — Close resolved conflict nodes (BA-gated)
 - **`RESOLVE_DFB.md`** — Close or reject developer feedback (BA-gated)
 - **`MILESTONE_CLOSE.md`** — 6-gate milestone closure validation
@@ -94,8 +102,9 @@ Append to log.md, update home.md, rebuild snapshot.md.
 
 | Operation | Must Run First | Inputs | Outputs | Preconditions |
 |-----------|---------------|--------|---------|---------------|
-| `INGEST` | `BOOT` with clean snapshot | FRS file path (`/raw_sources/<id>.frs`) | ACT-/ENT-/CMD-/FLOW-/STATE- nodes | Source FRS exists in `/raw_sources/` |
-| `COMPILE` | `INGEST` for all target FRS | Module name (e.g., "Payments") | FEAT- node with linked flows | All FRS logged; no blocking CNF- nodes |
+| `INGEST` | `BOOT` with clean snapshot | FRS file path (`/raw_sources/<id>.frs`) | Staging entry (no DDD nodes yet) | Source FRS exists in `/raw_sources/` |
+| `ABSORB` | `INGEST` for target FRS(es) | Staging entry IDs (or `all` for batch) | ACT-/ENT-/CMD-/FLOW-/STATE- nodes | All targets staged; no blocking CNF- halting the batch |
+| `COMPILE` | `ABSORB` for all target FRS | Module name (e.g., "Payments") | FEAT- node with linked flows | All FRS absorbed; no blocking CNF- nodes; **scenario_gaps: 0 for target module** |
 | `ISSUE` | `COMPILE` (FEAT `status: approved`) | FEAT- ID (e.g., "FEAT-123") | GitLab issue body (copy-paste) | Manual GitLab issue creation after generation |
 | `IMPLEMENT` | `ISSUE` (GitLab closed), `GENERATE testrun` with signed TRUN | FEAT- ID | `status: implemented` set on FEAT | At least one TRUN with `status: pass` and `sign_off_by` |
 | `SUPERSEDE` | New FEAT in `review` or `approved` | Old FEAT- ID, New FEAT- ID | Bidirectional linking (`superseded_by`, `supersedes`) | Old FEAT not terminal (`rejected`/`superseded`) |
@@ -108,6 +117,7 @@ Append to log.md, update home.md, rebuild snapshot.md.
 | `RESOLVE/REJECT DFB` | BA reviewed feedback | DFB- ID | `status: resolved` or `rejected` | DFB `status: open` or `acknowledged` |
 | `LINT` | `BOOT` with clean snapshot | None | Debt report (28 classes) | None (can run anytime) |
 | `QUERY/ARCHAEOLOGY` | `BOOT` (to load snapshot) | Query string + optional scopes | SYN- node (if insight preserved) | None (read-only) |
+| `SYNTHESIZE` | `BOOT` (to load snapshot) | Insight description | SYN- node filed in `12_Synthesis/` | 3-bar quality gate must pass: (1) ≥2 distinct source nodes, (2) non-obvious connection, (3) falsifiable/actionable claim; agent must prompt BA before filing |
 | `END` | All work complete | None | Session handoff log | No dirty snapshot without rebuild |
 
 ---
@@ -170,13 +180,15 @@ digraph command_selection {
 | Question | Command | Notes |
 |----------|---------|-------|
 | "What's in the wiki?" | `QUERY` | General synthesis, optionally scoped |
-| "How did this evolve?" | `ARCHAEOLOGY` | Chronological trace of node or FRS |
+| "How did this evolve?" | `ARCHAEOLOGY` | Chronological trace of node or FRS (query-time) |
 | "Any quality debt?" | `LINT` | Full 28-class audit |
 | "Conflicts to resolve?" | `LINT` then `RESOLVE CNF/DFB` | BA-gated resolution |
 | "Ready to close milestone?" | `MILESTONE CLOSE` | Runs all 6 gates automatically |
-| "Need test evidence?" | `GENERATE testplan` → `GENERATE testrun` | Durable TRUN required for IMPLEMENT |
+| "Need test evidence?" | `GENERATE testplan` → `GENERATE testrun` → `SIGN` | Unsigned TRUN does not satisfy Gate 4 |
 | "Feature done?" | `IMPLEMENT` | Only after TRUN sign-off |
-| "Starting fresh?" | `BOOT` (first time) | Initializes snapshot |
+| "Starting fresh (new codebase)?" | `BOOT` (first time) | Initializes snapshot |
+| "Starting fresh (existing codebase)?" | `boot --brownfield` | One-time brownfield init via INIT_BROWNFIELD |
+| "Cross-cutting insight worth filing?" | `SYNTHESIZE` | 3-bar quality gate; agent prompts before filing |
 
 ---
 
@@ -184,8 +196,8 @@ digraph command_selection {
 
 ### New Feature Development
 ```
-BOOT → INGEST <frs-id> → COMPILE <module> → ISSUE <feat-id> → 
-[development work] → GENERATE testplan → GENERATE testrun → 
+BOOT → INGEST <frs-id> → ABSORB <frs-id> → COMPILE <module> → ISSUE <feat-id> → 
+[development work] → GENERATE testplan → GENERATE testrun → SIGN <trun-id> →
 [QA execution] → IMPLEMENT <feat-id>
 ```
 
@@ -210,7 +222,7 @@ repeat LINT until clean → END
 
 ### Supersede Outdated Feature
 ```
-BOOT → COMPILE <module> (new FRS) → 
+BOOT → INGEST <new-frs> → ABSORB <new-frs> → COMPILE <module> → 
 SUPERSEDE <old-feat-id> <new-feat-id> → 
 [BA review of new FEAT] → ISSUE <new-feat-id>
 ```
@@ -248,8 +260,11 @@ SUPERSEDE <old-feat-id> <new-feat-id> →
 
 - **`query archaeology`** is a subcommand of `query`, not a standalone top-level command. Always use `query archaeology <id>` (not `archaeology <id>`).
 - **`generate`** has 5 variants (testplan, testrun, apidoc, topology, changelog) all documented in `GENERATE.md`.
+- **`generate testrun`** produces an **unsigned** TRUN. The developer must then run `sign <trun-id>` to populate `sign_off_by`. A TRUN with `pipeline_status: pass` but no `sign_off_by` does **not** satisfy Gate 4.
 - **`resolve dfb`** and **`reject dfb`** share the same procedure file (`RESOLVE_DFB.md`) with separate sections.
 - **`RECOVER`** is auto-triggered by `BOOT`, never user-invoked directly.
+- **`boot --brownfield`** triggers `INIT_BROWNFIELD.md` for one-time existing-codebase initialization. Regular `boot` never invokes the brownfield path after the first run.
+- **`INGEST` vs `ABSORB`**: INGEST stages the FRS (fast, reversible, no DDD nodes written). ABSORB compiles staging entries to DDD nodes and can halt mid-batch on conflict — providing rollback safety. Always run INGEST before ABSORB.
 
 ---
 
