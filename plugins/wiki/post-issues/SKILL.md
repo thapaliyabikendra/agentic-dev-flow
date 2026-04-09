@@ -1,6 +1,6 @@
 ---
 name: post-issues
-description: Reads a compiled FEAT- node and posts it to GitLab as a parent issue with one child issue per task. Can be invoked manually or automatically by COMPILE when role=BA. When invoked by COMPILE, accepts pre-resolved context and skips status check.
+description: Reads a compiled FEAT- node and posts it to GitLab as a parent issue with one child issue per task, all linked to the correct milestone. Can be invoked manually or automatically by COMPILE when role=BA. When invoked by COMPILE, accepts pre-resolved context and skips status check.
 mcp_servers:
   - mcp__gitlab
 ---
@@ -65,17 +65,29 @@ Fetch project members and match to CLAUDE.md usernames:
 mcp__gitlab__list_project_members(project_id)
 ```
 
-**Task labels** by content signal:
+### Label Resolution
 
-| Signal | Labels |
+Use **only** labels present in `allowed_labels` from `CLAUDE.md`. Never invent or use labels outside this list.
+
+For each task, read its full content (title, description, technical scope, acceptance criteria) and assign labels by matching against the meaning of each allowed label. Use the following signal keywords as hints — but always verify the candidate label exists in `allowed_labels` before applying it:
+
+| Content signals in task | Candidate labels to check against allowed_labels |
 |---|---|
-| endpoint / API / controller | `backend`, `api` |
-| database / entity / migration | `backend`, `db` |
-| email / notification | `backend` |
-| frontend / view / component | `frontend` |
-| validation / permissions | `backend` |
+| UI, view, component, screen, layout, styling, frontend, design, form | `frontend` and any allowed label suggesting UI work |
+| API, endpoint, controller, route, HTTP, REST, request/response | `backend`, `api`, and any allowed label suggesting API work |
+| database, entity, migration, schema, ORM, query, model | `backend`, `db`, and any allowed label suggesting data work |
+| email, notification, webhook, event, message | `backend` and any allowed label suggesting async/comms work |
+| validation, permissions, authorization, access control | `backend` and any allowed label suggesting security work |
+| integration, third-party, external service | any allowed label suggesting integration work |
+| test, QA, spec, coverage | any allowed label suggesting testing work |
 
-Only use labels present in `allowed_labels`. If no assignment rules in CLAUDE.md → ask user once for preference (all one person / split parent+tasks / unassigned).
+**Resolution rule:** For each candidate label derived from the signals above, only apply it if it appears verbatim in `allowed_labels`. If a relevant concept has no matching entry in `allowed_labels`, skip it silently and note it in the Step 9 summary.
+
+All task issues also receive the `feature-spec` label if it is present in `allowed_labels`.
+
+The parent issue always receives `feature` and `feature-spec` if present in `allowed_labels`.
+
+**Assignee preference:** If no assignment rules exist in `CLAUDE.md` → ask user once for preference (all one person / split parent+tasks / unassigned).
 
 ---
 
@@ -94,7 +106,7 @@ Match by title. Found → update. Not found → create. Also check `gitlab_issue
 mcp__gitlab__create_issue(
   project_id, milestone_id, assignee_ids,
   title:  "{FEAT-ID} — {feature title}",
-  labels: ["feature", "feature-spec"],
+  labels: ["feature", "feature-spec"],   ← only if present in allowed_labels
   description: {see template below}
 )
 ```
@@ -133,7 +145,7 @@ For each task in order:
 mcp__gitlab__create_issue(
   project_id, milestone_id, assignee_ids,
   title:  "{FEAT-ID} — Task {N}: {task title}",
-  labels: [{task labels}, "feature-spec"],
+  labels: [{task_labels_resolved_in_step_4}, "feature-spec"],   ← only allowed labels
   description: {see template below}
 )
 ```
@@ -176,12 +188,13 @@ FEAT → GitLab Complete
 Feature: {FEAT-ID} | Milestone: {milestone} → #{milestone_id} | Project: {project_id}
 
 Parent:  #{iid} — {title}
-Tasks:   #{iid} Task 1 → linked to #{parent}
-         #{iid} Task 2 → linked to #{parent}
+Tasks:   #{iid} Task 1 [labels: frontend] → linked to #{parent}
+         #{iid} Task 2 [labels: backend, api] → linked to #{parent}
          ...
 
 Created: {n} parent, {n} tasks | Updated: {n} | Links: {n}
 FEAT frontmatter updated: gitlab_issue: {url}
+Skipped labels (not in allowed_labels): {list or "none"}
 View: {gitlab_project_url}/-/milestones/{milestone_id}
 ```
 
@@ -195,8 +208,11 @@ View: {gitlab_project_url}/-/milestones/{milestone_id}
 | CLAUDE.md missing | Ask user for project ID, users, labels, wiki root |
 | Milestone not found | Halt — list available, ask user to create first |
 | Duplicate issue found | Update existing |
-| Label not in allowed list | Skip silently, flag in summary |
+| Label not in allowed_labels | Skip silently, flag in Step 9 summary |
+| No label matches task content | Apply `feature-spec` only (if allowed), flag in summary |
 | Issue link already exists | Skip silently |
 | Issue link creation fails | Flag in summary, continue |
 | FEAT has no tasks | Create parent only, flag in summary |
 | GitLab MCP unavailable | Output as structured markdown for manual creation |
+| post-issues succeeds (IID returned) | For each `source_frs` in this FEAT, delete `raw_sources/entries/FRS-{id}/` if the partitioned folder exists; skip if absent; never touch flat `raw_sources/FRS-{id}.md` files; flag deletion failures in summary, do not halt |
+| post-issues succeeds (IID returned) | For each `source_frs` in this FEAT, delete `raw_sources/entries/FRS-{id}/` if it exists; skip if absent; never touch flat `raw_sources/FRS-{id}.md` files; flag failures in summary, do not halt |

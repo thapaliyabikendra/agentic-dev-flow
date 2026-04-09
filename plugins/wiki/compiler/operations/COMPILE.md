@@ -25,7 +25,7 @@ Aggregate FRS documents into a dependency-ordered Feature Spec with Shadow QA re
 6. Populate `## Performance Contracts` from `sla` fields of all linked INT- nodes.
 7. Populate `linked_actors` from all ACT- nodes referenced in linked Flows and Capabilities.
 8. Draft `FEAT-{MODULE}-{ID}.md` using `node-definitions/FEAT.md`. Set `status: review`.
-9. If role: BA in claude.md → automatically set status: approved and immediately invoke `post-issues` skill on the created FEAT-.    Otherwise set status: review and do not post to GitLab.
+9. If role: BA in claude.md → automatically set status: approved and immediately invoke `post-issues` skill on the created FEAT-. Once `post-issues` returns a valid IID, for each `source_frs` in the FEAT delete `raw_sources/entries/FRS-{id}/` if the partitioned folder exists — skip if absent, never touch flat `raw_sources/FRS-{id}.md` files, flag any deletion failures in the summary without halting.    Otherwise set status: review and do not post to GitLab.
 10. Log, update `home.md`, update `snapshot.md → open_features`, rebuild snapshot.
 11. **BA Review Prompt.** Output using `templates/BA_REVIEW_PROMPT.md`.
 
