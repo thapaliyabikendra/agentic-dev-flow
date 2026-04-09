@@ -35,6 +35,11 @@ Two or more signals → halt, output breakdown recommendation:
 
 ## Procedure
 
+0. **Fetch source from GitLab.** Before any processing, check whether the source file exists locally.
+   - Look for `raw_sources/FRS-{id}.md` (single file) or `raw_sources/entries/FRS-{id}/index.md` (partitioned).
+   - If **not found**: invoke the `fetch-gitlab-issues` skill — run `/get issue {iid} from project {gitlab_project_id}` — and wait for it to complete before continuing.
+   - If **already present**: skip fetch, proceed directly to step 1.
+   - If the fetch fails (issue not found, auth error, etc.): halt and report the error. Do not proceed to staging.
 1. **Monolith check.** Apply signals above before any further processing. Halt if triggered.
 2. **Source type routing.** Identify source type from the table above and note intended node targets for the staging entry.
 3. **Parse and catalogue.** Read the source document. Identify every implied Actor, Entity, Command, Flow, State, Integration, UI Spec, Decision, Capability, Architecture blueprint, and Convention. Record these as **candidate metadata only** — do not instantiate node files.
