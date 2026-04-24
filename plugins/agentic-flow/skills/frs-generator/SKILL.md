@@ -280,7 +280,6 @@ Draft the full FRS internally using `references/FRS-TEMPLATE.md`. Use business l
 - [ ] Dependencies section (Section 5) documents BOTH inter-FRS and system dependencies?
 - [ ] Inter-FRS dependencies (if any) correctly identify which other FRS must complete first?
 - [ ] All referenced FRS IDs (FRS-XX) exist in the confirmed module list or other approved modules?
-- [ ] Scenarios section includes ≥ 3 scenarios (User Interaction, Edge/Variation, Failure/Exception)
 
 If any item fails → refine inline → re-run checklist before proceeding.
 
@@ -419,7 +418,7 @@ curl --request POST \
 
 Every generated FRS follows `references/FRS-TEMPLATE.md` (18 sections):
 
-Purpose → Scope → Actors → Preconditions → Dependencies → Trigger → Main Flow → Alternative Flows → Exception Flows → Postconditions → Form Fields → Functional Requirements → Scenarios → Non-Functional Requirements → Business Rules → Edge Cases → Open Questions → Revision History
+Purpose → Scope → Actors → Preconditions → Dependencies → Trigger → Main Flow → Alternative Flows → Exception Flows → Postconditions → Form Fields → Functional Requirements → Non-Functional Requirements → Business Rules → Edge Cases → Open Questions → Revision History
 
 See `references/FRS-TEMPLATE.md` for the complete template with field descriptions and inline guidance.
 
@@ -432,7 +431,6 @@ See `references/FRS-TEMPLATE.md` for the complete template with field descriptio
 | Business rules | ≥ 2 |
 | Edge cases | ≥ 2 |
 | Exception flows | ≥ 1 |
-| Scenarios | ≥ 3 (1 successful, 2 validation/error) |
 
 Rules and edge cases must be business constraints or policy violations — not technical limits — stated in user-facing language, scoped to the locked module.
 

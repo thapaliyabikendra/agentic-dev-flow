@@ -137,78 +137,7 @@ Specific obligations the operation must satisfy, stated as business-facing SHALL
 
 ---
 
----
-
-## 13. Scenarios (NEW MANDATORY SECTION)
-
-Every FRS MUST include a Scenarios section that describes real-world business interactions.
-
----
-
-## 🎯 Purpose
-
-Scenarios describe how the business operation is experienced in real life, not system behavior or technical execution.
-
----
-
-## 📌 Mandatory Scenario Types (minimum 3 per FRS)
-
-Each FRS MUST include:
-
-### 1. User Interaction Scenario
-Normal successful business flow
-
-### 2. Edge / Variation Scenario
-Different business conditions, actors, or contextual variations
-
-### 3. Failure / Exception Scenario
-Business rule violation, rejection, or blocked operation
-
----
-
-## 🧾 Scenario Format
-
-### Scenario Title: <clear business scenario name>
-
-**Actors:**
-- <business actor(s)>
-
-**Preconditions:**
-- <business state before scenario begins>
-
-**Flow:**
-1. Step one (business action)
-2. Step two (business response)
-3. Step three (outcome progression)
-
-**Outcome:**
-- Final business result
-
----
-
-## ⚙️ Scenario Rules
-
-- NO technical/system/API/database language
-- NO duplication of Functional Requirements
-- MUST reflect real-world business behavior
-- MUST stay within module scope
-- MUST align with defined actors
-- MUST represent observable business outcomes
-
----
-
-## 🚨 Enforcement Rule
-
-Before presenting any FRS:
-
-- Must include ≥ 3 scenarios
-- Must include all 3 scenario types
-- Must be business-only language
-- Must not overlap with Functional Requirements section
-
----
-
-## 14. Non-Functional Requirements
+## 13. Non-Functional Requirements
 
 Include only NFRs specific to this operation. Platform-wide NFRs belong in a separate architecture spec.
 
@@ -222,7 +151,7 @@ Include only NFRs specific to this operation. Platform-wide NFRs belong in a sep
 
 ---
 
-## 15. Business Rules
+## 14. Business Rules
 
 Constraints imposed by policy, regulation, or domain logic — not technical decisions.
 
@@ -233,7 +162,7 @@ Constraints imposed by policy, regulation, or domain logic — not technical dec
 
 ---
 
-## 16. Edge Cases
+## 15. Edge Cases
 
 Boundary or unusual-but-valid scenarios the operation must handle correctly.
 
@@ -244,7 +173,7 @@ Boundary or unusual-but-valid scenarios the operation must handle correctly.
 
 ---
 
-## 17. Open Questions
+## 16. Open Questions
 
 Business decisions or policy clarifications that remain unresolved and require stakeholder input.
 
@@ -256,7 +185,7 @@ Business decisions or policy clarifications that remain unresolved and require s
 
 ---
 
-## 18. Revision History
+## 17. Revision History
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
