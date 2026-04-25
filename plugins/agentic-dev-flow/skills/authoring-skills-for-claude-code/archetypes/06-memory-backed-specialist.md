@@ -58,6 +58,7 @@ tools: Read, Grep, Glob, Bash(git diff *), Bash(git log *)
 model: sonnet
 skills:
   - review-conventions
+mcpServers: []
 memory: project
 permissionMode: default
 ---
@@ -72,6 +73,7 @@ You are the code reviewer for this repository. You have persistent memory at `.c
 - `memory: project` — enables persistent memory directory; Read, Write, Edit tools are auto-enabled so the subagent can manage its memory files
 - `skills:` — standing knowledge the subagent always needs, independent of memory
 - `tools` — enumerated; subagents with memory have automatic Read/Write/Edit for the memory directory but still need explicit tools for everything else
+- `mcpServers` — set explicitly. `[]` for the typical specialist (reviewer, writer, responder) that does not call MCP tools. Memory-backed specialists are invoked repeatedly across sessions; an unscoped `mcpServers` field pays the inheritance cost on every invocation. See `quality-gates.md` Gate 11.
 - `model:` — explicit; memory-backed specialists usually justify Sonnet or Opus because quality compounds
 
 **On the skill:**
@@ -204,6 +206,7 @@ tools: Read, Grep, Glob, Bash(git diff *), Bash(git log *)
 model: sonnet
 skills:
   - review-conventions
+mcpServers: []
 memory: project
 permissionMode: default
 color: green
@@ -286,6 +289,9 @@ In each, the specialist's value compounds with use. Early runs are mediocre; lat
 
 **❌ Allowing `tools: inherit`** — specialist has access to everything the main session had, including writes the Memory Contract should forbid.
 **✅ Enumerate.**
+
+**❌ Omitting `mcpServers` on a memory-backed specialist** — invoked repeatedly across sessions, the specialist pays inheritance cost on each invocation. A reviewer dispatched on every PR over a month accumulates significant unnecessary context loading.
+**✅ `mcpServers: []` unless the specialist's job is calling MCP tools.**
 
 **❌ Letting memory grow past auto-load limits without topic files** — critical early context drops off the top of `MEMORY.md`, specialist behaves inconsistently.
 **✅ MEMORY.md is an index; topic files hold detail.**

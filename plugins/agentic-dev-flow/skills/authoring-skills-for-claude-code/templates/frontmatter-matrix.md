@@ -63,7 +63,7 @@ Relevant to archetypes 4, 5, 6, 7.
 | `permissionMode` | O (`default`) | **R** (`default`; not `bypassPermissions`) | O (`default`) | depends on subagent |
 | `maxTurns` | O | O | O | O |
 | `skills` | **R** (preload standing knowledge) | **R** | **R** | **R** |
-| `mcpServers` | O | O (scoped) | O | O |
+| `mcpServers` | **R** (scoped, often `[]`) | **R** (scoped, often `[]`) | **R** (scoped, often `[]`) | **R** per subagent |
 | `hooks` | O | O | O | O |
 | `memory` | F | O | **R** | per phase |
 | `background` | F | **R** (`true`) | F | per phase |
@@ -78,7 +78,7 @@ Relevant to archetypes 4, 5, 6, 7.
 
 **`description`** — Used by the main session to decide whether to dispatch. Write in third person; include "use proactively" if the subagent should be dispatched automatically when relevant work appears.
 
-**`tools`** — ENUMERATED. Never rely on `inherit`. Subagents do not inherit main session tools. List every Bash pattern, every MCP tool, every built-in (`Read`, `Write`, `Edit`, `Grep`, `Glob`). `Write` and `Edit` are auto-enabled when `memory:` is set (for memory file management), but you still list them for clarity when the subagent uses them beyond memory.
+**`tools`** — ENUMERATED. Never rely on `inherit`. Subagents do not inherit main session tools. List every Bash pattern, every MCP tool, every built-in (`Read`, `Write`, `Edit`, `Grep`, `Glob`). `Write` and `Edit` are auto-enabled when `memory:` is set (for memory file management), but you still list them for clarity when the subagent uses them beyond memory. **Note:** `tools` controls which tools the subagent may *execute*. It does NOT control which MCP server tool definitions are *loaded into context*. For that, set `mcpServers` (see below). A subagent with `tools: Read, Grep` and no MCP servers used will still inherit every connected MCP server's full tool catalogue if `mcpServers` is omitted.
 
 **`disallowedTools`** — Optional explicit denylist. Use when you want `inherit` behavior MINUS certain tools. In practice, prefer `tools` allowlist.
 
@@ -94,7 +94,14 @@ Relevant to archetypes 4, 5, 6, 7.
 
 **`skills`** — Array of skill names to preload. Subagents do NOT inherit the main session's loaded skills — preload explicitly.
 
-**`mcpServers`** — Optional scoped MCP server list if the subagent uses MCP tools. Narrow the scope; do not grant broad MCP access by default.
+**`mcpServers`** — **Required** for every subagent definition. **The default behavior is dangerous: when omitted, the subagent inherits ALL connected MCP servers' tool definitions into its context window**. Each connected server adds its full tool catalogue — GitLab alone is ~25k tokens, Playwright ~5k, others vary. Multi-server projects routinely inherit 30k–50k tokens of MCP definitions per subagent dispatch, paid even when the subagent uses none of them.
+
+Set explicitly:
+- `mcpServers: []` — no MCP tools (most common for code reviewers, planners, auditors)
+- `mcpServers: [gitlab]` — scoped list of servers the subagent actually calls
+- (Omit only with a written justification — e.g., the subagent is itself a general-purpose MCP exploration agent)
+
+This is separate from the `tools` allowlist. `tools` controls which built-in tools the subagent may execute. `mcpServers` controls which MCP server tool definitions get loaded into the subagent's context. A subagent with `tools: Read, Grep` and no MCP usage will still pay 30k+ tokens per dispatch if `mcpServers` is omitted. See `quality-gates.md` Gate 11.
 
 **`hooks`** — Lifecycle hooks (pre-dispatch, post-dispatch, on-status-change).
 
@@ -169,6 +176,7 @@ description: Reviews PRs against linked spec documents. Use proactively on PRs w
 tools: Read, Grep, Glob, Bash(gh pr view *), Bash(gh pr diff *)
 model: sonnet
 skills: [review-conventions, spec-document-locations]
+mcpServers: []
 permissionMode: default
 ---
 ```
@@ -196,6 +204,7 @@ effort: low
 background: true
 permissionMode: default
 skills: [audit-conventions]
+mcpServers: []
 memory: project
 isolation: worktree
 ---
@@ -220,6 +229,7 @@ description: Senior code reviewer with persistent learned patterns. Use proactiv
 tools: Read, Grep, Glob, Bash(git diff *), Bash(git log *)
 model: sonnet
 skills: [review-conventions]
+mcpServers: []
 memory: project
 permissionMode: default
 ---
@@ -249,6 +259,7 @@ Each phase uses its own subagent definition (see Archetypes 3–6 for per-phase 
 - **`allowed-tools: Bash(*)`** — overly broad, defeats scoping
 - **`context: fork` without `agent:`** — skill won't fork correctly
 - **Subagent `tools` missing** — relies on inheritance; silent broken behavior
+- **Subagent `mcpServers` missing** — silent inheritance of every connected MCP server's tool definitions; routinely 30k+ tokens per dispatch. Set `mcpServers: []` if none needed.
 - **Subagent `skills` missing** — subagent has no standing knowledge despite what the skill body references
 - **`background: true` with `bypassPermissions`** — unjustified; use enumerated `tools` + `permissionMode: default`
 - **`memory:` set without a Memory Contract in body** — fails Gate 4

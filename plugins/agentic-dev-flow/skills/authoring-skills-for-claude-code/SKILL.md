@@ -204,7 +204,7 @@ description: "You MUST use this when reviewing any pull request before merging, 
 
 For archetypes 4, 5, 6, and 7, draft subagent definitions as separate files under `.claude/agents/`. These are independent of the SKILL.md and need their own frontmatter. See the archetype file for the exact fields required — the critical ones are `tools`, `permissionMode`, `skills`, `memory`, `background`, `isolation`.
 
-**Verify:** Each subagent definition can be read independently and still makes sense. A subagent definition that only makes sense when read alongside its caller is a latent bug.
+**Verify:** Each subagent definition can be read independently and still makes sense. A subagent definition that only makes sense when read alongside its caller is a latent bug. Each subagent's `mcpServers` is set explicitly (`[]` if none, scoped list otherwise) — omitting it inherits every connected MCP server's tool definitions, paid as context on every dispatch.
 **On failure:** Move shared context out of the SKILL.md and into the subagent's `skills:` preload, or into CLAUDE.md.
 
 ### Step 6: Write the SKILL.md body
@@ -287,6 +287,9 @@ All of these are loaded on demand, not at skill activation. Reference them from 
 **❌ Putting project conventions inline in the skill body** — Forces every skill to re-encode the same conventions; they drift apart over time.
 **✅ Surface CLAUDE.md additions. Let one source of truth govern conventions.**
 
+**❌ Subagents inheriting MCP tool definitions by default** — Every subagent dispatch loads ALL connected MCP server tool definitions into the subagent's fresh context. With several servers connected (GitLab, Playwright, Pencil, etc.), inheritance routinely costs 30k+ tokens per dispatch — paid even when the subagent uses none of them. Multi-phase orchestrators compound this across every phase.
+**✅ Set `mcpServers: []` on subagents that need no MCP tools, or list only the specific servers required. Tool enumeration controls permissions; MCP scoping controls context budget — they are separate decisions.**
+
 **❌ Dispatcher orchestrators without a Synthesis step** — Subagent results pile up in main context, unsynthesized, and the user is left to reconcile them.
 **✅ Every multi-subagent orchestrator ends with an explicit synthesis phase.**
 
@@ -342,6 +345,7 @@ allowed-tools: Bash(gh pr *) Bash(git diff *) Bash(git log *)
 
 - **Archetype before body.** The decision precedes the writing, every time.
 - **Frontmatter is design.** Every field has a justification or does not exist.
+- **Tools control permissions; MCP scoping controls context.** A subagent's `tools` field gates what it can do. Its `mcpServers` field gates how much context loads when it dispatches. Both need narrow scopes — the first for safety, the second for budget.
 - **Description describes WHEN.** Workflow belongs in the body, not the YAML.
 - **One source of truth for conventions.** CLAUDE.md holds them; skills reference them.
 - **Synthesize before returning.** Subagent output is raw material, not a final answer.

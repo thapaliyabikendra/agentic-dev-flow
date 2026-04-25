@@ -44,6 +44,7 @@ model: sonnet
 skills:
   - review-conventions
   - spec-document-locations
+mcpServers: []
 permissionMode: default
 ---
 
@@ -66,6 +67,7 @@ model: sonnet
 skills:
   - review-conventions
   - code-style-guide
+mcpServers: []
 permissionMode: default
 ---
 
@@ -85,6 +87,7 @@ Return a report with: Summary, Blocking issues, Non-blocking issues, Information
 **Field notes on subagents:**
 - `tools` — enumerate; NEVER inherit
 - `skills:` — preload standing knowledge the subagent needs (subagents do NOT inherit skills from main session)
+- `mcpServers:` — set explicitly. `[]` for subagents that do not call MCP tools (most reviewers, planners, auditors). Omitting this field inherits every connected MCP server's tool catalogue into the subagent's context — typically 30k+ tokens, paid every dispatch. See `quality-gates.md` Gate 11.
 - `model:` — explicitly set; do not rely on `inherit` for deterministic dispatcher behavior
 - `description` — used by Claude to decide when to delegate; "use proactively" encourages main session dispatch
 
@@ -305,6 +308,8 @@ For each, the synthesis is the point. If you are not synthesizing, you don't nee
 ## Common failures specific to this archetype
 
 **❌ Dispatching subagents without preloading the right skills** — subagents do NOT inherit skills from main session. If the reviewer needs `review-conventions`, add it to `skills:` in the subagent definition.
+
+**❌ Subagents inheriting MCP server definitions by default** — every reviewer, planner, or auditor dispatched without `mcpServers: []` loads every connected MCP server's tool catalogue into its context. With GitLab + Playwright + others connected, this is 30k+ tokens per dispatch. A two-reviewer dispatch pays it twice. The subagent does not need any of these tools — it pays the context cost regardless. **Fix:** `mcpServers: []` on every subagent that does not call MCP tools.
 
 **❌ Relying on `inherit` for subagent model** — main conversation may be on Opus, dispatcher may want Haiku for speed, reviewer may need Opus for reasoning. Be explicit.
 

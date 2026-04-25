@@ -46,6 +46,7 @@ background: true
 permissionMode: default
 skills:
   - audit-conventions
+mcpServers: []
 memory: project
 isolation: worktree
 color: purple
@@ -60,6 +61,7 @@ You are the nightly auditor. When invoked, scan the codebase per the loaded audi
 
 - `background: true` — THE defining field
 - `tools` — EVERY tool the subagent might use, enumerated. Do not add MCP tools via `inherit`; declare explicitly via `mcpServers:` if needed.
+- `mcpServers` — explicitly set. `[]` for the typical case (the auditor uses `gh` via Bash, not via an MCP server). Omitting this field inherits every connected MCP server into context — for a long-running background subagent invoked nightly, this is the most expensive form of waste in the entire skill system. See `quality-gates.md` Gate 11.
 - `permissionMode: default` — do NOT use `bypassPermissions` for background subagents except under written exception. Pre-approval of specific tools is the correct pattern; bypass is a different, riskier thing.
 - `isolation: worktree` — recommended for background subagents that modify files. Gives the subagent an isolated copy; main session is unaffected if the work goes wrong.
 - `memory: project` — common for background subagents that run repeatedly and should remember what they've already flagged. See the Memory Contract section below.

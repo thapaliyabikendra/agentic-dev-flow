@@ -54,6 +54,8 @@ Every skill competes for context. These budgets are not suggestions.
 
 **Note on frontmatter:** YAML frontmatter has a hard cap of 1,024 characters total. Over that, either values get truncated or the skill fails to load.
 
+**Note on subagent context:** Gate 2 measures the SKILL.md file that loads when the skill is referenced. **It does NOT measure the per-dispatch context loaded into each subagent.** That cost is governed by Gate 11 (Subagent context budget) and is typically 10–100× larger. Skills that pass Gate 2 cleanly often fail Gate 11. Treat them as separate budgets.
+
 ---
 
 ## Gate 3: Persuasion calibration
@@ -227,6 +229,38 @@ Applies only to edits, not new skills.
 
 ---
 
+## Gate 11: Subagent context budget
+
+A separate concern from Gate 2's SKILL.md word count. Gate 2 is about the file that loads when the skill is referenced. **This gate is about the runtime context inside each dispatched subagent** — and it routinely dwarfs Gate 2 in scale.
+
+Every subagent runs in its own context window. Three sources of inheritance load tokens into that window before the subagent even reads its prompt:
+
+1. **MCP server tool definitions** — by default, **every connected MCP server's tool definitions are inherited into every dispatched subagent**. With servers like GitLab (~25k tokens), Playwright (~5k), Context7, Pencil, Canva, etc., this runs to 30k–50k tokens per dispatch. Paid every time, regardless of whether the subagent uses any MCP tool.
+2. **`tools` inheritance** — when `tools` is omitted or set to `inherit`, the subagent gets the main session's full built-in tool set (`Bash`, `Edit`, `Write`, etc.). Each carries its own definition tokens.
+3. **`skills` preload** — explicit, but each preloaded skill loads its full content (not on-demand). Preload only what the subagent's task actually requires.
+
+**Check:**
+- Every subagent definition has `mcpServers:` explicitly set. If the subagent uses no MCP tools, it is `mcpServers: []`. If it uses some, it is a scoped list (`mcpServers: [gitlab]`, not the implicit "all").
+- `tools` is enumerated, never `inherit`. Built-in tools are listed minimally.
+- `skills:` lists only what the task requires. A reviewer that only needs `review-conventions` does not preload three additional skills "for completeness".
+
+**Fails when:**
+- Subagent omits `mcpServers` and the project has connected servers — silent inheritance, paid every dispatch
+- Subagent uses `tools: inherit` — broad permission AND broad context
+- Multi-phase orchestrator dispatches 3+ subagents that each inherit MCP — multiplies the inheritance cost across phases
+- Background subagent inherits MCP it cannot use anyway (permission-prompted servers fail in background; you pay for tokens that cannot run)
+
+**Cost example:**
+A repo with GitLab + Playwright + Context7 connected (~32k MCP tokens, common in agentic workflows). A multi-phase orchestrator with four subagents, each inheriting MCP by default: **~128k tokens of MCP definitions paid across one orchestrator run**, in subagents that often need only `Read`, `Grep`, and `Bash(git *)`. Setting `mcpServers: []` on each cuts this to zero with no functional change.
+
+**When MCP scoping is wrong (rare but real):**
+- A subagent whose actual job is to call MCP tools (e.g., a `gitlab-issues-agent`) — keep the relevant servers, not all of them
+- A subagent that the user explicitly wants to have full MCP access for exploratory work — document why in a comment
+
+**The default is always "scope down". Inheritance must be justified per subagent, in writing, in the subagent definition.**
+
+---
+
 ## Gate checklist — copy for each skill
 
 ```
@@ -240,6 +274,7 @@ Applies only to edits, not new skills.
 [ ] Gate 8: Sibling awareness — no overlap with existing skills
 [ ] Gate 9: Permissions enumerated — no implicit inheritance
 [ ] Gate 10: Edit integrity — if editing, classify and run accordingly
+[ ] Gate 11: Subagent context budget — `mcpServers` scoped per subagent, `tools` enumerated, `skills` minimal
 ```
 
-All ten gates must pass. A single failure blocks publication. "I'll fix it after merge" is how skill directories rot.
+All eleven gates must pass. A single failure blocks publication. "I'll fix it after merge" is how skill directories rot.

@@ -57,6 +57,7 @@ Multi-phase orchestrators are the largest skill type and require the most struct
 | The Process | **Numbered phases** (format (c) from superpowers template) — one ### heading per phase |
 | Handling Subagent Status | **Required** — per-phase: what DONE means, how BLOCKED cascades |
 | Phase Handoff | **Required** — how each phase's output becomes the next phase's input |
+| **Subagent Context Budget** | **Required** — `mcpServers` scoping per subagent and the per-run cost arithmetic |
 | Synthesis | Required at the end — what the orchestrator returns to the user |
 | Permissions Contract | Required if any phase uses background or bypass |
 | Memory Contract (summary) | Required if any phase uses memory |
@@ -231,6 +232,32 @@ Each phase's artifact is the next phase's input. Explicit handoffs:
 
 The orchestrator owns handoffs. Subagents do not call each other directly.
 
+## Subagent Context Budget
+
+Multi-phase orchestrators are where MCP and tool inheritance hurts most: every phase dispatches a fresh subagent, and every subagent that omits `mcpServers` inherits the entire connected MCP catalogue into its context.
+
+**Cost arithmetic for `/ship-feature`:**
+- Phase 1: planner subagent (forked) — 1 dispatch
+- Phase 2: implementer subagent — 1 dispatch
+- Phase 3: review-pr orchestrator dispatches 2 reviewer subagents — 2 dispatches
+- Phase 4: nightly-auditor (background) — 1 dispatch
+
+That is **5 subagent dispatches per `/ship-feature` run**. With ~32k tokens of MCP definitions connected and no scoping, the orchestrator burns ~160k tokens of MCP definitions across one feature ship — in subagents that almost certainly do not call MCP tools (planner reads code, implementer writes code, reviewers compare against conventions, auditor scans for patterns).
+
+**Required for every multi-phase orchestrator:**
+
+1. **Every subagent definition under `.claude/agents/` declares `mcpServers:` explicitly.** `[]` for phases that do not call MCP. Scoped list (`[gitlab]`) when a phase genuinely needs one.
+2. **Every subagent's `tools` is enumerated.** No `inherit`. Multi-phase work amplifies the cost of broad inheritance across phases.
+3. **Phase model selection accounts for context cost.** A Haiku planner with `mcpServers: []` is fundamentally different from a Sonnet planner that inherits everything; the budget difference matters across many runs.
+
+**Audit checklist before publishing a multi-phase orchestrator:**
+- Every phase's subagent definition has `mcpServers:` set
+- No subagent uses `tools: inherit`
+- Total MCP token cost per orchestrator run is calculated and recorded in a comment in SKILL.md
+- Background phases (Phase 4 in this example) especially have `mcpServers: []` — background subagents cannot use MCP tools that require auth prompts anyway, so inheritance is pure waste
+
+See `quality-gates.md` Gate 11 for the underlying gate.
+
 ## Permissions Contract
 
 Phase 4 is background. Its permissions are pre-approved via the `nightly-auditor` subagent definition. See `archetypes/05-background-orchestrator.md` and `.claude/agents/nightly-auditor.md`.
@@ -320,6 +347,8 @@ Phases 1–3 run synchronously and permission-prompt normally.
 **❌ Phases sharing tools implicitly** — Phase 2 uses `Bash(git *)`; Phase 3 assumes Phase 2 committed. Without explicit handoff, this brittle coupling breaks when phases run in different subagents.
 
 **❌ Orchestrator eats too much context** — the orchestrator itself reads every phase's artifact back into main session, blowing the budget. **Fix:** synthesis takes summaries, not full artifacts. Artifact links are sufficient.
+
+**❌ Phase subagents inheriting MCP definitions across all phases** — the highest-impact context failure in multi-phase work. Five dispatches × 30k inherited MCP tokens = 150k tokens paid for nothing. None of the typical phases (plan/implement/review/audit) call MCP tools. **Fix:** `mcpServers: []` on every subagent definition unless that phase's job is calling MCP.
 
 ---
 

@@ -187,6 +187,6 @@ Business decisions or policy clarifications that remain unresolved and require s
 
 ## 17. Revision History
 
-| Version | Date | Author | Changes |
-|---------|------|--------|---------|
-| 1.0 | YYYY-MM-DD | frs-generator | Initial draft |
+| Version | Date | Author | Changes | Source |
+|---------|------|--------|---------|--------|
+| 1.0 | YYYY-MM-DD | frs-generator | Initial draft | e.g. `path/to/file.tsx` + traversed `path/to/store.ts`; commit `<sha>` |

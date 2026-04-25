@@ -37,10 +37,12 @@ allowed-tools: Bash(gh pr *) Bash(gh pr diff *) Bash(gh pr view *)
 **Field notes:**
 - `context: fork` — THE defining field. Without it, this is not a forked skill.
 - `agent:` — pick the agent type. Common choices:
-  - `Explore` — read-only, Haiku, optimized for code search. Best default for most forked skills.
+  - `Explore` — read-only, Haiku, optimized for code search. Best default for most forked skills. **Smallest context footprint**: minimal built-in toolset, designed for cheap exploration.
   - `Plan` — read-only, inherits main conversation's model. Use when the task is to produce a plan.
-  - `general-purpose` — full tools, inherits model. Use when the forked task must edit files.
-  - Custom subagent name — reference any subagent from `.claude/agents/`.
+  - `general-purpose` — full tools, inherits model. Use when the forked task must edit files. **Largest context footprint** — inherits the full main-session toolset.
+  - Custom subagent name — reference any subagent from `.claude/agents/`. Inherits exactly what that subagent declares.
+
+**Context-budget angle:** the fork's prompt is the skill body, but the fork ALSO loads built-in tool definitions and (by default) MCP server tool definitions before reading the prompt. Picking `Explore` over `general-purpose` is partly a permission decision and partly a context-budget decision: `general-purpose` may inherit MCP servers that the forked task does not need. If you author a custom subagent for a forked skill, set `mcpServers: []` unless MCP is the point.
 - `allowed-tools` — tools available to the forked subagent. Must not exceed what `agent:` allows. `Explore` has read-only access regardless of what you list here.
 - `argument-hint` — expected arguments, used via `$ARGUMENTS` or `$0`, `$1`, etc. in the body
 
