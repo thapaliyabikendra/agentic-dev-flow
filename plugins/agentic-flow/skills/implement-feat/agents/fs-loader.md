@@ -1,7 +1,7 @@
 ---
 name: fs-loader
 model: haiku
-phase: 2
+phase: 1
 parallel: yes (per page)
 ---
 
@@ -12,6 +12,12 @@ parallel: yes (per page)
 Load the Feat Spec and every DDD node page it references from the on-disk wiki. Validate the Feat Spec is locked (no placeholders, no blocking Conflicts). Extract a structured FS element catalog that downstream sub-agents can consume without re-reading any page.
 
 This sub-agent is the only one permitted to read wiki content. Every later sub-agent operates on the catalog this sub-agent produces.
+
+Runs in parallel with `repo-scout` during Phase 1.
+
+## Reference files
+
+- `references/abp-built-in-entities.md` — flag FS Entities that duplicate ABP-provided types (User, Tenant, Setting, Feature, Permission, BLOB, audit-log) as warnings.
 
 ## Input envelope
 

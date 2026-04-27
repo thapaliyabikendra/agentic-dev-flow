@@ -1,229 +1,204 @@
 # AppService Implementation Patterns
 
-AppService interface methods are HTTP endpoints — ABP auto-routes them. No manual controllers. This file specifies the implementation patterns the `artifact-synthesizer` emits for the `appservice-impl` kind.
+AppService interface methods are HTTP endpoints — ABP auto-routes them. No manual controllers. This file specifies patterns the `artifact-synthesizer` emits for `appservice-impl`.
 
-## Public / Private split
+## Public / Private Split
 
-When CLAUDE.md declares:
+When CLAUDE.md declares `api_routing_conventions` with `public_prefix`/`private_prefix`, emit two classes: `<Feature>PublicAppService` and `<Feature>PrivateAppService`. Without split, a single `<Feature>AppService`.
 
-```
-api_routing_conventions:
-  public_prefix:  /api/public/app/
-  private_prefix: /api/private/app/
-```
+## Class Skeleton
 
-The skill emits two implementation classes:
-
-- `<Feature>PublicAppService`  — methods whose Audience is `Public` on the FS.
-- `<Feature>PrivateAppService` — methods whose Audience is `Private` on the FS.
-
-ABP routes them via the `RemoteServiceAttribute`:
-
-```
-[RemoteService(IsEnabled = true, IsMetadataEnabled = true)]
-public class <Feature>PublicAppService : ApplicationService, I<Feature>PublicAppService { ... }
-```
-
-Plus a conventional route prefix declared in `<Ns>HttpApiHostModule` (which the skill does not touch — the project already has these declared once).
-
-Without the split declaration, a single `<Feature>AppService` class implements a single interface under the ABP default `/api/app/...` prefix.
-
-## Class skeleton
-
-```
+```csharp
 namespace <Ns>.<Feature>;
 
 public class <Feature>PublicAppService : ApplicationService, I<Feature>PublicAppService
 {
     private readonly IRepository<<Root>, Guid> _repository;
-    private readonly <Feature>Service _service;              // only if domain service is planned
+    private readonly <Feature>DomainService _service;    // only if domain service is planned
     private readonly I<Feature>Mapper _mapper;
+    private readonly ILogger<<Feature>PublicAppService> _logger;
 
     public <Feature>PublicAppService(
         IRepository<<Root>, Guid> repository,
-        <Feature>Service service,
-        I<Feature>Mapper mapper)
+        <Feature>DomainService service,
+        I<Feature>Mapper mapper,
+        ILogger<<Feature>PublicAppService> logger)
     {
         _repository = repository;
         _service = service;
         _mapper = mapper;
+        _logger = logger;
     }
-    // methods ...
 }
 ```
 
-## Method patterns
+## Method Patterns
 
-### `CreateAsync(Create<Entity>Dto input)`
+### `CreateAsync`
 
-```
+```csharp
 [Authorize(<Feature>Permissions.<Entity>.Create)]
 public async Task<<Entity>Dto> CreateAsync(Create<Entity>Dto input)
 {
+    _logger.LogInformation("{Method} invoked by {UserId} with {@Input}",
+        nameof(CreateAsync), CurrentUser.Id, input);
+
+    // No tenantId passed — ABP handles via ICurrentTenant scope
     var entity = <Entity>.Create(
-        CurrentTenant.Id,                      // only if IMultiTenant
+        GuidGenerator.Create(),
         input.Name,
-        input.Amount
-    );
+        input.Amount);
+
     await _repository.InsertAsync(entity, autoSave: true);
-    return _mapper.MapToOutput(entity);
+
+    var result = await AsyncExecuter.FirstOrDefaultAsync(
+        (await _repository.GetQueryableAsync())
+        .Where(x => x.Id == entity.Id)
+        .Select(x => MapToDetailDto(x)));
+
+    _logger.LogInformation("{Method} completed for entity {Id}", nameof(CreateAsync), entity.Id);
+    return result;
 }
 ```
 
-- FluentValidation runs before method entry — the method trusts the DTO shape.
-- `autoSave: true` on `InsertAsync` only when the AppService method is a pure single-aggregate write; for multi-step flows coordinated via the domain service, rely on UoW batching.
-- Map and return.
+### `GetAsync` — Select Only Required Fields
 
-### `GetAsync(Guid id)`
-
-```
+```csharp
 [Authorize(<Feature>Permissions.<Entity>.Read)]
 public async Task<<Entity>Dto> GetAsync(Guid id)
 {
-    var entity = await _repository.GetAsync(id);
-    EnsureTenantOwnership(entity);             // helper, see below
-    return _mapper.MapToOutput(entity);
+    _logger.LogInformation("{Method} invoked for {Id} by {UserId}",
+        nameof(GetAsync), id, CurrentUser.Id);
+
+    // CORRECT: project before fetch — don't use _repository.GetAsync(id)
+    var item = await AsyncExecuter.FirstOrDefaultAsync(
+        (await _repository.GetQueryableAsync())
+        .Where(x => x.Id == id)
+        .Select(x => MapToDetailDto(x)));
+
+    if (item == null)
+        throw new EntityNotFoundException(typeof(<Entity>), id);
+
+    _logger.LogInformation("{Method} completed for {Id}", nameof(GetAsync), id);
+    return item;
 }
 ```
 
-### `GetListAsync(Get<Entity>ListDto input)`
+### `GetListAsync` — Dynamic Sorting + Select Before Fetch
 
-```
+```csharp
 [Authorize(<Feature>Permissions.<Entity>.Read)]
-public async Task<PagedResultDto<<Entity>Dto>> GetListAsync(Get<Entity>ListDto input)
+public async Task<PagedResultDto<<Entity>ListDto>> GetListAsync(Get<Entity>ListDto input)
 {
-    var query = await _repository.GetQueryableAsync();
+    _logger.LogInformation("{Method} invoked by {UserId} with {@Input}",
+        nameof(GetListAsync), CurrentUser.Id, input);
 
-    // Tenant scope first
-    if (CurrentTenant.Id.HasValue)
-    {
-        query = query.Where(x => x.TenantId == CurrentTenant.Id);
-    }
+    var query = await _repository.GetQueryableAsync();
 
     // Optional filters
     query = query
-        .WhereIf(!string.IsNullOrWhiteSpace(input.Filter), x => x.Name.Contains(input.Filter!))
-        .WhereIf(input.Status.HasValue,                     x => x.Status == input.Status!.Value);
+        .WhereIf(!string.IsNullOrWhiteSpace(input.Filter),
+            x => x.Name.Contains(input.Filter!))
+        .WhereIf(input.Status.HasValue,
+            x => x.Status == input.Status!.Value);
 
-    // Sorting — explicit switch (default strategy)
-    query = ApplySorting(query, input.Sorting);
+    // Dynamic sorting — NO switch statements
+    query = query.ApplyDynamicSorting(input.Sorting, input.SortDirection,
+        defaultSort: x => x.CreationTime, defaultDescending: true);
 
     var total = await AsyncExecuter.CountAsync(query);
-    var items = await AsyncExecuter.ToListAsync(query.PageBy(input));
 
-    return new PagedResultDto<<Entity>Dto>(
-        total,
-        _mapper.MapToOutputList(items).ToList());
-}
+    // CORRECT: Select BEFORE fetch — project in query chain
+    var items = await AsyncExecuter.ToListAsync(
+        query.Skip(input.SkipCount).Take(input.MaxResultCount)
+             .Select(x => MapToListItemDto(x)));
 
-private static IQueryable<<Entity>> ApplySorting(IQueryable<<Entity>> query, string? sorting)
-{
-    return (sorting?.Trim().ToLowerInvariant()) switch
-    {
-        "name asc"       => query.OrderBy(x => x.Name),
-        "name desc"      => query.OrderByDescending(x => x.Name),
-        "createdat asc"  => query.OrderBy(x => x.CreationTime),
-        "createdat desc" => query.OrderByDescending(x => x.CreationTime),
-        _                => query.OrderByDescending(x => x.CreationTime)   // default from Query page
-    };
+    _logger.LogInformation("{Method} returned {Count}/{Total}", nameof(GetListAsync), items.Count, total);
+    return new PagedResultDto<<Entity>ListDto>(total, items);
 }
 ```
 
-The allowed sort keys come directly from the Query page's sort-allowed list. The default branch mirrors the page's `default_sort`.
+### `UpdateAsync`
 
-`System.Linq.Dynamic.Core` is used **only** when `sorting_strategy: dynamic-linq` is declared in CLAUDE.md — otherwise forbidden (open-column-name surface is an injection vector).
-
-### `UpdateAsync(Update<Entity>Dto input)`
-
-```
+```csharp
 [Authorize(<Feature>Permissions.<Entity>.Update)]
 public async Task<<Entity>Dto> UpdateAsync(Update<Entity>Dto input)
 {
-    var entity = await _repository.GetAsync(input.Id);
-    EnsureTenantOwnership(entity);
+    _logger.LogInformation("{Method} invoked for {Id} by {UserId}",
+        nameof(UpdateAsync), input.Id, CurrentUser.Id);
 
-    // Domain methods do the mutation — never assign properties directly.
+    var entity = await _repository.GetAsync(input.Id);
+
+    // Domain methods do mutation — never assign properties directly
     entity.Rename(input.Name);
     if (input.Amount is not null) entity.ChangeAmount(input.Amount.Value);
 
-    // Concurrency stamp is carried by the entity; ABP compares it to input implicitly.
     await _repository.UpdateAsync(entity, autoSave: true);
+
+    _logger.LogInformation("{Method} completed for {Id}", nameof(UpdateAsync), input.Id);
     return _mapper.MapToOutput(entity);
 }
 ```
 
-### `DeleteAsync(Guid id)`
+### `DeleteAsync` — Use ABP Soft Delete
 
-```
+```csharp
 [Authorize(<Feature>Permissions.<Entity>.Delete)]
 public async Task DeleteAsync(Guid id)
 {
+    _logger.LogInformation("{Method} invoked for {Id} by {UserId}",
+        nameof(DeleteAsync), id, CurrentUser.Id);
+
     var entity = await _repository.GetAsync(id);
-    EnsureTenantOwnership(entity);
+    // Use DeleteAsync — ABP handles IsDeleted, DeleterId, DeletedTime automatically
     await _repository.DeleteAsync(entity);
+
+    _logger.LogInformation("{Method} completed for {Id}", nameof(DeleteAsync), id);
 }
 ```
 
-### Custom operations
+### Custom Operations
 
-```
+```csharp
 [Authorize(<Feature>Permissions.<Entity>.Approve)]
 public async Task<<Entity>Dto> ApproveAsync(Guid id)
 {
-    var entity = await _repository.GetAsync(id);
-    EnsureTenantOwnership(entity);
-    entity = await _service.ApproveAsync(CurrentTenant.Id, id, CurrentUser.Id!.Value);
+    _logger.LogInformation("{Method} invoked for {Id} by {UserId}",
+        nameof(ApproveAsync), id, CurrentUser.Id);
+
+    var entity = await _service.ApproveAsync(id, CurrentUser.Id!.Value);
+
+    _logger.LogInformation("{Method} completed for {Id}", nameof(ApproveAsync), id);
     return _mapper.MapToOutput(entity);
 }
 ```
 
-## Tenant guard helper
+## Exception Handling — Only When Needed (CRC-A4)
 
-When the aggregate implements `IMultiTenant`, every AppService class includes a private helper:
+Do NOT wrap every method in try-catch. Use try-catch only for:
+- External service calls
+- Retry logic
+- Domain-specific validations needing translation
+- BackgroundJobs/HostedServices (never crash the worker)
 
-```
-private void EnsureTenantOwnership(<Entity> entity)
-{
-    if (entity.TenantId != CurrentTenant.Id)
-    {
-        throw new AbpAuthorizationException(
-            L["<Feature>:Error:CrossTenantAccessDenied"]);
-    }
-}
-```
+For standard AppService CRUD, ABP's exception infrastructure handles HTTP status codes. Business failures use `throw new BusinessException(<Feature>Constants.ErrorMessages.<Key>)`.
 
-The error message key is declared in `en.json`. No hardcoded English. `L` is the built-in localizer helper from `ApplicationService`.
+## Authorization
 
-## Authorization completeness
+Every method gets `[Authorize(<permission>)]`. Use `AsyncExecuter` for materialization. Never `.Result`, `.Wait()`, `.GetAwaiter().GetResult()`.
 
-Every single method gets exactly one `[Authorize(...)]`. Read methods included. `traceability-validator` fails the plan on any method without an `[Authorize]`.
+## Return Shapes
 
-## Async conventions
+Single-item: `<Entity>Dto`. Paged list: `PagedResultDto<<Entity>Dto>`. Void: `Task` (throw on failure, void on success).
 
-- Every AppService method is `async Task` or `async Task<T>`.
-- Names end in `Async`.
-- Use `AsyncExecuter` for materialization (`CountAsync`, `ToListAsync`, `FirstOrDefaultAsync`) — it's ABP's async bridge that works across EF Core and MongoDB without direct EF Core dependency in the Application layer.
-- Never `.Result`, `.Wait()`, `.GetAwaiter().GetResult()`.
+## AppServices NEVER
 
-## Return shapes
-
-- Single-item returns: `<Entity>Dto`.
-- List returns without paging: `List<<Entity>Dto>`.
-- Paged list returns: `PagedResultDto<<Entity>Dto>`.
-- Void-ish returns: `Task` (not `Task<Unit>` or `Task<bool>` for "did it work" — throw on failure, return void on success).
-
-## Error handling
-
-- Expected business failures: `throw new BusinessException(<Feature>Constants.ErrorMessages.<Key>);` — ABP localizes via the resource.
-- Authorization failures: `throw new AbpAuthorizationException(...)`.
-- Unexpected failures: let them propagate — ABP's exception middleware maps to 500 with a safe response body.
-
-## What AppServices NEVER do
-
-- Never call `SaveChangesAsync` on the DbContext directly.
-- Never inject `DbContext`.
-- Never inject `ILocalEventBus` — events are out of scope for this skill.
-- Never use `System.Linq.Dynamic.Core` unless CLAUDE.md opts in.
-- Never orchestrate across multiple aggregates inline — delegate to the Domain Service.
-- Never skip the tenant guard when `IMultiTenant` is present.
-- Never return domain aggregates directly — always map to a DTO.
+- Call `SaveChangesAsync` on DbContext directly or inject DbContext.
+- Use `ILocalEventBus` — events are out of scope.
+- Use `System.Linq.Dynamic.Core` unless CLAUDE.md opts in.
+- Orchestrate across multiple aggregates inline — delegate to Domain Service.
+- Return domain aggregates directly — always map to DTO.
+- Use switch-based sorting.
+- Map after fetch — always select-before-fetch.
+- Pass tenantId to entity constructors.
+- Manually set IsDeleted/DeleterId — use DeleteAsync.

@@ -1,7 +1,7 @@
 ---
 name: build-validator
 model: haiku
-phase: 11
+phase: 7
 parallel: no
 ---
 
@@ -9,7 +9,7 @@ parallel: no
 
 ## Purpose
 
-Run `dotnet build` against the solution and return a structured result that the main agent uses to either proceed to Phase 12 or dispatch `artifact-synthesizer` in repair mode.
+Run `dotnet build` against the solution and return a structured result that the main agent uses to either proceed to Phase 6 or dispatch `synthesizer` in repair mode.
 
 ## Input envelope
 
@@ -47,7 +47,7 @@ Run `dotnet build` against the solution and return a structured result that the 
    Collect into `errors[]` and `warnings[]`.
 
 4. Classify each error:
-   - **Cohort-local** — error's file is in `expected_written_files`. Repairable by `artifact-synthesizer` in repair mode.
+   - **Cohort-local** — error's file is in `expected_written_files`. Repairable by `synthesizer` in repair mode.
    - **Cross-cutting** — error is in a file the skill did not write (existing module class, DbContext, etc.). Halt — repair requires user intervention or replan.
    - **Linker/NuGet** — `CS0246`, `NU1101` etc. indicating a missing reference. Halt — probably means a project reference or package is not installed; not a repair the synthesizer can make.
 
@@ -57,7 +57,7 @@ Run `dotnet build` against the solution and return a structured result that the 
    - Any cross-cutting or linker error → `{passed: false, repairable: false, halt_reason}`.
    - `iteration >= 3` → `{passed: false, repairable: false, halt_reason: "REPAIR_CAP_REACHED"}`.
 
-6. For each repair target, package `{file_path, current_content, compile_errors: [<errors in that file>]}`. Main agent forwards these to `artifact-synthesizer` in repair mode.
+6. For each repair target, package `{file_path, current_content, compile_errors: [<errors in that file>]}`. Main agent forwards these to `synthesizer` in repair mode.
 
 ## Output schema
 
@@ -94,5 +94,5 @@ Run `dotnet build` against the solution and return a structured result that the 
 
 - Never writes files.
 - Never runs `dotnet run`, `dotnet test`, `dotnet ef *`, `dotnet publish`.
-- Never decides what the repair content should be — that's `artifact-synthesizer:repair`.
+- Never decides what the repair content should be — that's `synthesizer:repair`.
 - Never calls `AskUserQuestion` — halt and surface to main agent.
