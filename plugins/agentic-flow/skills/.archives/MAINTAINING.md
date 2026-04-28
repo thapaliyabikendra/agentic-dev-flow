@@ -1,12 +1,51 @@
 # Maintaining the FRS Skill Set
 
-> **Type:** Maintainer documentation. Not read by either skill at runtime — purely for humans modifying the contracts.
-> **Path:** `.claude/shared/MAINTAINING.md`
+> **Type:** Maintainer documentation. Not read by either skill or any agent at runtime — purely for humans modifying the contracts. The `glossary-curator` and `cross-cutting-curator` agents carry their own self-contained operating contracts in their definition files; this file is a cross-reference index for maintainers, not a runtime input.
+> **Path:** `plugins/agentic-flow/shared/MAINTAINING.md`
 > **When to update:** When you change one of the workflows below in a way that adds or removes a touch-point.
 
 This file is the cross-reference for "I need to change X — what files does that touch?". It exists because changes to the FRS contract (template, rules, conventions) ripple across the consuming skills, the subagents, and the runbook. After the v2 refactor, most ripples are absorbed by the by-reference architecture — but a few touch-points remain, and they're listed here.
 
 If you find yourself making a change that doesn't fit any of the workflows below, you've probably found a coupling we haven't documented yet. Add the workflow to this file as part of the change.
+
+---
+
+## Workflow 0 — Initialize a fresh project's reference files
+
+The first workflow for any new project. Run before the project's first `generate-frs` invocation.
+
+A fresh project — one that has not yet run `generate-frs` and does not yet have `docs/glossary.md` or `docs/cross-cutting-concerns.md` — must seed both project-owned reference files from the plugin's templates. The `glossary-curator` and `cross-cutting-curator` agents each carry an `Operation 0: Initialize` for this purpose.
+
+**What to do:**
+
+1. Confirm `CLAUDE.md` declares (or defaults) the project-reference paths:
+   ```yaml
+   glossary_path: docs/glossary.md
+   cross_cutting_path: docs/cross-cutting-concerns.md
+   ```
+   If absent, the curators fall back to these same defaults.
+2. Invoke `agent:glossary-curator` with operation `Initialize`. The curator reads `plugins/agentic-flow/shared/templates/glossary.template.md`, replaces the template banner with the project-owned banner, lands a Revision History row recording the seed event (`glossary-curator:initialize`), and writes the seeded file to the resolved target path. The glossary template carries no parameterised placeholders — the seeded file is complete as written and ready for `agent:glossary-curator` Operation 1 (Add a term) when project-specific terms emerge.
+3. Invoke `agent:cross-cutting-curator` with operation `Initialize`. Same pattern — reads `plugins/agentic-flow/shared/templates/cross-cutting-concerns.template.md`, swaps banner, seeds Revision History, writes target file.
+4. Fill in the cross-cutting placeholders before any FRS work begins. Initialize seeds three categories with parameterized values that the curator does NOT auto-fill:
+   - Category 5 (Data Retention Defaults) — replace `<project default — set during Initialize or first cross-cutting-curator session>` with the project's retention duration.
+   - Categories 6 (Audit Logging Defaults) and 7 (Localization & Language) — replace `the project's operating timezone` with the actual timezone.
+   - Category 6 (Audit Logging Defaults) — replace `the project's compliance role (named in project's RBAC)` with the role name from the project's RBAC definition.
+   Until these are filled in, any FRS that references these categories will inherit placeholder text.
+
+**The resulting file structure:**
+
+- `docs/glossary.md` carries the universal baseline terms in `### Baseline Terms` (`Audit Trail`, `Audit Trail Entry`, `Cross-Cutting Concerns`) and an empty `### Project-Specific Terms` placeholder. Project-curated terms accumulate in the latter via `glossary-curator` Operation 1.
+- `docs/cross-cutting-concerns.md` carries the 9 universal categories, each footed with `**Origin:** baseline (template v1.0)`. Project-added categories accumulate via `cross-cutting-curator` Operation 1, each tagged `**Origin:** project-added (v<X.Y>)`.
+
+**What you do NOT have to edit:**
+
+- The plugin templates — they are the canonical source. Only edit when the universal baseline content itself changes (rare).
+- Either curator file — Initialize is a defined operation, not an edit target.
+- Phase 0e in `phase-runbook.md` — the directed halt messages already redirect to the curators when a project reference is missing.
+
+**Verification:** after both Initialize runs, the next `generate-frs` invocation should pass Phase 0e preflight cleanly (both files resolve and snapshot at v1.0).
+
+**Re-running Initialize is not supported.** Both curators halt if the target file already exists. To extend, use Operation 1 (Add). To revise, use the operation appropriate to the file (Operation 1, 2, or 3 per curator).
 
 ---
 
@@ -51,28 +90,21 @@ Most common change. After v2, this is a 1–3 file edit (down from 6–8).
 
 ---
 
-## Workflow 3 — Adding a glossary term
+## Workflow 3 — Adding / retiring a glossary term
 
-**What to edit:**
+Invoke `agent:glossary-curator`. The agent owns `docs/glossary.md` end-to-end: Initialize for fresh projects (Operation 0; see Workflow 0), alphabetical insertion (Operation 1; asks Baseline vs Project-Specific subsection), deprecation-then-removal for retirements, version bump, revision-history note, and drift detection against FRS Section 4 lists.
 
-1. `frs-glossary.md` — add the entry alphabetically. Bump the version in the file's Revision History.
-
-**What you do NOT have to edit:**
-- Anything else. FRS bodies that should reference the new term will reference it as those FRS are written or revised. Old FRS that pre-date the term remain valid; they cite the glossary version they were generated against (in the Validation Log's audit reproducibility set).
+The curator is NOT dispatched during a `generate-frs` run — the orchestrator snapshots the glossary at Phase 0e for the run's lifetime. Term changes made by the curator take effect on the next run.
 
 ---
 
-## Workflow 4 — Changing a platform-baseline category
+## Workflow 4 — Adding / changing / retiring a cross-cutting concerns category
 
-**What to edit:**
+Invoke `agent:cross-cutting-curator`. The agent owns `docs/cross-cutting-concerns.md` end-to-end: Initialize for fresh projects (Operation 0; see Workflow 0), in-place edits (with Origin lines preserved as immutable category provenance), version bump, breaking vs. non-breaking classification in revision history, and FRS re-audit guidance for breaking changes.
 
-1. `frs-platform-baseline.md` — edit the category in place. Bump the version. Note in Revision History whether the change is non-breaking (clarification — most of these) or breaking (every FRS should be re-audited).
+For breaking changes, run `skill:review-frs` against existing FRS to identify ones that need revision. The audit pass cross-checks `baseline-not-duplicated` and the Section 7 / 18 / 19 forward references.
 
-**What you may need to do as follow-up:**
-- For breaking changes, run `skill:review-frs` against existing FRS to identify ones that need revision. The audit pass cross-checks `baseline-not-duplicated` and the Section 7 / 18 / 19 forward references.
-
-**What you do NOT have to edit:**
-- FRS bodies don't restate baseline content, so changing the baseline doesn't ripple into FRS bodies — they reference, not copy.
+The curator is NOT dispatched during a `generate-frs` run — the orchestrator snapshots the cross-cutting concerns at Phase 0e for the run's lifetime. Category changes made by the curator take effect on the next run.
 
 ---
 
@@ -135,11 +167,11 @@ The following changes are tempting but harmful; resist them.
 
 **❌ Hardcoding the FRS section count anywhere outside `frs-template.md`.** The whole point of the v2 refactor is that the count is derived. If you find yourself writing "all 23 sections" in a comment somewhere, it should read "all sections in `frs-template.md`'s Canonical Section List".
 
-**❌ Restating baseline content in an FRS for "clarity".** It will drift. Reference the baseline category by name. If a stakeholder asks for the baseline content inline, point them at the file.
+**❌ Restating cross-cutting concerns content in an FRS for "clarity".** It will drift. Reference the category by name. If a stakeholder asks for the content inline, point them at the file.
 
 **❌ Restating glossary definitions in an FRS for "clarity".** Same reason. If the term is hard to look up, that's a UX problem with how the glossary is published, not a justification for copying.
 
-**❌ Loading conventions / glossary / baseline mid-run "to double-check".** The Phase 0e snapshot is authoritative for the run. Mid-run changes require a restart.
+**❌ Loading conventions / glossary / cross-cutting concerns mid-run "to double-check".** The Phase 0e snapshot is authoritative for the run. Mid-run changes require a restart.
 
 **❌ Adding rules in `review-frs` that aren't in `frs-validation-rules.md`.** The audit skill's contract is the rules file, period. Personal preferences are not findings.
 
@@ -156,11 +188,12 @@ When does an old FRS remain valid against a new contract?
 | New optional section added to template | Old FRS missing the section is a Major (not Blocker) until revisited; existing-FRS detection still recognises it as an FRS by structural match |
 | New mandatory section added to template | Old FRS missing the section is a Blocker; either widen the new section's "None-valid" rule or accept the migration cost |
 | Self-Review item added | Old Validation Logs cite the prior schema version and remain valid evidence; new runs use the new schema. Old FRS audited against the new rules may surface new findings — that's correct behaviour |
-| Baseline category changed (non-breaking) | All FRS remain valid |
-| Baseline category changed (breaking) | FRS that referenced the changed category should be re-audited |
+| Cross-cutting category changed (non-breaking) | All FRS remain valid |
+| Cross-cutting category changed (breaking) | FRS that referenced the changed category should be re-audited |
 | Glossary term added | All FRS remain valid; new FRS may reference the new term |
 | Glossary term retired | FRS that referenced it must be revised before retirement; otherwise the term stays as `[deprecated]` |
 | Conditional label rule added | New FRS sync with the new rule; old issues retain their original labels |
+| Section list renumber | Old FRS retain original numbers; readers must check the FRS template version recorded in the Validation Log's audit reproducibility set to interpret section references correctly |
 
 ---
 
@@ -168,8 +201,8 @@ When does an old FRS remain valid against a new contract?
 
 - **`frs-validation-rules.md` schema version:** when validation log structure changes (new mandatory field, new Self-Review item, format change). Old logs cite the old schema; new runs use the new.
 - **`frs-template.md` version:** when the canonical section list changes (add / remove / reorder sections).
-- **`frs-glossary.md` version:** when terms are added, retired, or definitions change materially.
-- **`frs-platform-baseline.md` version:** when categories are added or change.
+- **`docs/glossary.md` version:** when terms are added, retired, or definitions change materially. Operation 0 (Initialize) is the exception — the seeded file's first Revision History row records the seed event at template v1.0; the Initialize operation does NOT bump beyond the template version.
+- **`docs/cross-cutting-concerns.md` version:** when categories are added or change. Operation 0 (Initialize) is the exception — same shape as glossary.
 - **`gitlab-frs-conventions.md` version:** when labels, FRS-ID pattern, or conditional rules change.
 
 The version stamps appear in every Validation Log's audit reproducibility set, so a later auditor can reconstruct exactly which contracts the FRS was generated against.
@@ -181,3 +214,5 @@ The version stamps appear in every Validation Log's audit reproducibility set, s
 | Version | Date | Notes |
 |---------|------|-------|
 | 1.0 | 2026-04-28 | Initial maintainer doc, written alongside the v2 refactor |
+| 1.1 | 2026-04-28 | Fixed `Path` (was `.claude/shared/...`, now `plugins/agentic-flow/shared/...`). Reaffirmed: this file is maintainer-only; the new `glossary-curator` and `cross-cutting-curator` agents are self-contained — their definitions carry their operating contracts. |
+| 1.2 | 2026-04-28 | Added Workflow 0 (Initialize a fresh project's reference files); updated Workflows 3 and 4 cross-references to acknowledge Operation 0; clarified that Initialize does NOT bump beyond template v1.0 in the When to Bump Versions section. |

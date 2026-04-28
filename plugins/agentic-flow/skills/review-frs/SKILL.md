@@ -1,6 +1,6 @@
 ---
 name: review-frs
-description: "Audit an existing Functional Requirements Specification (FRS) against the canonical validation contract: structural completeness, Skill Constraint minimums, Self-Review checklist, NFR rubric, Bundling Detection, AC↔FR traceability, glossary resolution, platform-baseline non-duplication. Reads, never writes. For generating new FRS, use skill:generate-frs. Trigger phrases: review FRS, audit FRS, FRS quality, FRS check, validate spec, FRS findings."
+description: "Audit an existing Functional Requirements Specification (FRS) against the canonical validation contract: structural completeness, Skill Constraint minimums, Self-Review checklist, NFR rubric, Bundling Detection, AC↔FR traceability, glossary resolution, cross-cutting-concerns non-duplication. Reads, never writes. For generating new FRS, use skill:generate-frs. Trigger phrases: review FRS, audit FRS, FRS quality, FRS check, validate spec, FRS findings."
 disable-model-invocation: true
 argument-hint: "[path-to-frs-or-paste]"
 allowed-tools: Read, Glob, AskUserQuestion
@@ -32,24 +32,29 @@ Complete in order. Each phase is described in detail below.
 
 0. **Preflight** — verify the four shared references exist and snapshot the contract version stamps.
 1. **Read & structural pass** — confirm the input is an FRS; iterate the canonical section list and flag missing / out-of-order / spurious sections.
-2. **Apply the contract** — Skill Constraint, Self-Review checklist (currently 14 items; legend in `frs-validation-rules.md` is authoritative), Severity Guide, NFR Rubric, Bundling Detection, AC↔FR traceability, glossary resolution, baseline non-duplication, OQ tag taxonomy.
+2. **Apply the contract** — Skill Constraint, Self-Review checklist (currently 14 items; legend in `frs-validation-rules.md` is authoritative), Severity Guide, NFR Rubric, Bundling Detection, AC↔FR traceability, glossary resolution, cross-cutting non-duplication, OQ tag taxonomy.
 3. **Compose findings** — produce a structured audit report in the format defined below.
 4. **User disposition** — present the finding count and let the user choose next steps.
 
 ## Phase 0 — Preflight
 
-Read these four shared references and snapshot their versions:
+Read these four references and snapshot their versions:
 
 ```
-Read('.claude/shared/frs-template.md')
-Read('.claude/shared/frs-validation-rules.md')
-Read('.claude/shared/frs-glossary.md')
-Read('.claude/shared/frs-platform-baseline.md')
+Read('.claude/shared/frs-template.md')          # plugin-owned
+Read('.claude/shared/frs-validation-rules.md')  # plugin-owned
+Read(<glossary_path>)                           # project-owned; default docs/glossary.md
+Read(<cross_cutting_path>)                      # project-owned; default docs/cross-cutting-concerns.md
 ```
 
-These four files are the audit contract. Capture the version stamps (`frs_template_version`, `validation_rules_schema`, `glossary_version`, `baseline_version`) — they appear in the audit report's reproducibility footer so a later reader can reconstruct exactly which contract was applied.
+The plugin-owned references are at `.claude/shared/`. The project-owned references are resolved from `CLAUDE.md`'s `glossary_path` and `cross_cutting_path` keys; if either is absent, fall back to the defaults above. If a resolved file is missing, halt with the path-specific directed message:
 
-Missing any → halt with the specific path. The audit cannot proceed against a partial contract.
+- For a missing glossary file: *"Project reference `<resolved glossary path>` is not present. Run `agent:glossary-curator` with operation `Initialize` to seed it from the plugin template, or update `CLAUDE.md`'s `glossary_path` key to point at an existing file. Then re-run the audit."*
+- For a missing cross-cutting-concerns file: *"Project reference `<resolved cross-cutting path>` is not present. Run `agent:cross-cutting-curator` with operation `Initialize` to seed it from the plugin template, or update `CLAUDE.md`'s `cross_cutting_path` key to point at an existing file. Then re-run the audit."*
+
+Capture the version stamps (`frs_template_version`, `validation_rules_schema`, `glossary_version`, `baseline_version` — the last name is preserved for backward compatibility with prior audit logs). They appear in the audit report's reproducibility footer so a later reader can reconstruct exactly which contract was applied.
+
+The audit cannot proceed against a partial contract.
 
 ## Phase 1 — Read & Structural Pass
 
@@ -95,20 +100,20 @@ Run each rule from `frs-validation-rules.md` in order:
 | 4 | exception-cover | Section 12 covers invalid input AND unauthorised access AND failure / non-completion? |
 | 5 | business-postconds | Section 13 stated as business outcomes, not system states? |
 | 6 | skill-constraint | (Already checked at 2a) |
-| 7 | dependencies-section | Section 7 documents BOTH inter-FRS and system dependencies, with a forward reference to the platform baseline? |
+| 7 | dependencies-section | Section 7 documents BOTH inter-FRS and system dependencies, with a forward reference to the cross-cutting concerns file? |
 | 8 | frs-ids-exist | Every FRS-ID referenced in Section 7 exists in the approved set (the user supplies this set if asked, OR list them as "to verify externally" if the user can't confirm) |
 | 9 | nfr-rubric | Section 18 NFRs pass the NFR Rubric? |
 | 10 | in-module-actors | Every actor in Section 5 belongs to the FRS's locked module (the user supplies the module if not stated in the FRS header) |
 | 11 | no-cross-module | No cross-module business rules / outcomes / dependencies? |
-| 12 | glossary-resolves | Every term used in the body that appears in Section 3 resolves to an entry in `frs-glossary.md`? Every term in Section 3 is used in the body? |
-| 13 | baseline-not-duplicated | Section 18 and Section 19 reference the platform baseline rather than restating its content? |
+| 12 | glossary-resolves | Every term used in the body that appears in Section 4 resolves to an entry in `docs/glossary.md`? Every term in Section 4 is used in the body? |
+| 13 | baseline-not-duplicated | Section 18 and Section 19 reference the cross-cutting concerns file rather than restating its content? (mnemonic name preserved for backward compatibility) |
 | 14 | ac-fr-traceable | Every AC in Section 17 traces to ≥1 FR via `Traces to` column? Every Must-priority FR in Section 16 is cited by ≥1 AC? |
 
 For each item, produce the corresponding character (`P` / `F` / `R` is generation-time only — for review, just `P` for pass and a finding for fail) and, if fail, a finding entry per Section 3 below.
 
 **2c. Severity Guide.** Each finding must be classified Blocker / Major / Minor per the table in `frs-validation-rules.md`.
 
-**2d. NFR Rubric.** Every entry in Section 18 must (a) be in business language, (b) be operation-specific, (c) not restate baseline. Apply the rubric examples from the rules file.
+**2d. NFR Rubric.** Every entry in Section 18 must (a) be in business language, (b) be operation-specific, (c) not restate cross-cutting content. Apply the rubric examples from the rules file.
 
 **2e. AC ↔ FR Traceability.** Cross-check the AC table (Section 17) against the FR table (Section 16):
 
@@ -117,7 +122,7 @@ For each item, produce the corresponding character (`P` / `F` / `R` is generatio
 - Every FR-ID cited in `Traces to` must exist in Section 16. List dangling references as Major.
 - ACs that restate an FR verbatim ("AC-NN: The system shall …") are Minor.
 
-**2f. Glossary Resolution.** For every term in Section 3, look up the entry in `frs-glossary.md`. Missing entries → Major (term unresolved). For every domain-looking term used in the body but not in Section 3 → Minor (probable missing reference). Use judgement on what counts as a "domain term" — proper nouns of business artefacts are the strong signal.
+**2f. Glossary Resolution.** For every term in Section 4, look up the entry in `docs/glossary.md`. Missing entries → Major (term unresolved). For every domain-looking term used in the body but not in Section 4 → Minor (probable missing reference). Use judgement on what counts as a "domain term" — proper nouns of business artefacts are the strong signal.
 
 **2g. Bundling Detection.** Apply the signals from `frs-validation-rules.md` § Bundling Detection. Multiple actors, multiple triggers, multiple disjoint state transitions → Blocker.
 
@@ -133,7 +138,7 @@ The report is the deliverable. Format:
 # FRS Audit Report
 
 **FRS:** <FRS-ID and title from the input>
-**Audited against:** validation-rules schema vN.M, template vX.Y, glossary vX.Y, baseline vX.Y
+**Audited against:** validation-rules schema vN.M, template vX.Y, glossary vX.Y, cross-cutting concerns vX.Y
 **Audit date:** <ISO 8601>
 **Verdict:** PASS | PASS_WITH_MAJORS | FAIL
 
@@ -183,7 +188,7 @@ P P F P P P P P F P P P F F
 - Validation rules version: <vN.M>
 - Template version: <vX.Y>
 - Glossary version: <vX.Y>
-- Platform baseline version: <vX.Y>
+- Cross-cutting concerns version: <vX.Y>
 - Audit performed by: skill:review-frs
 ```
 
@@ -211,14 +216,14 @@ AskUserQuestion(questions=[{
 
 If the user picks "Generate revisions", produce rewrites for each named finding. Note that this skill does NOT modify the FRS — the rewrites are advisory text the user applies elsewhere (or via `skill:generate-frs`'s revision sub-loop if the FRS is a current-run output).
 
-## Shared references (loaded at Phase 0)
+## References (loaded at Phase 0)
 
 | Reference | Purpose |
 |---|---|
-| `.claude/shared/frs-template.md` | Canonical section list — defines what an FRS structurally is |
-| `.claude/shared/frs-validation-rules.md` | The full audit contract: Self-Review, Severity Guide, NFR Rubric, AC↔FR rule, Bundling Detection, OQ taxonomy |
-| `.claude/shared/frs-glossary.md` | Term resolution for `glossary-resolves` Self-Review item |
-| `.claude/shared/frs-platform-baseline.md` | Baseline content for `baseline-not-duplicated` Self-Review item |
+| `.claude/shared/frs-template.md` (plugin-owned) | Canonical section list — defines what an FRS structurally is |
+| `.claude/shared/frs-validation-rules.md` (plugin-owned) | The full audit contract: Self-Review, Severity Guide, NFR Rubric, AC↔FR rule, Bundling Detection, OQ taxonomy |
+| `<glossary_path>` (project-owned; default `docs/glossary.md`) | Term resolution for `glossary-resolves` Self-Review item |
+| `<cross_cutting_path>` (project-owned; default `docs/cross-cutting-concerns.md`) | Cross-cutting content for `baseline-not-duplicated` Self-Review item (mnemonic preserved for backward compatibility) |
 
 ## Common Mistakes
 
@@ -232,7 +237,7 @@ If the user picks "Generate revisions", produce rewrites for each named finding.
 
 ## Integration
 
-**Required before:** the four shared references in `.claude/shared/`. No GitLab connectivity required (this skill is read-only and never calls external services).
+**Required before:** the two plugin-owned references in `.claude/shared/` (`frs-template.md`, `frs-validation-rules.md`) and the two project-owned references resolved from `CLAUDE.md` (`glossary_path`, `cross_cutting_path` — defaults `docs/glossary.md` and `docs/cross-cutting-concerns.md`). No GitLab connectivity required (this skill is read-only and never calls external services).
 
 **vs. skill:generate-frs:** that skill writes new FRS. This one audits existing ones. Both share `frs-validation-rules.md` as canonical contract — never duplicate it.
 

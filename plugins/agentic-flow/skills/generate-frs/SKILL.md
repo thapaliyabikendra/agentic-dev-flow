@@ -14,7 +14,7 @@ allowed-tools: Read, Glob, Agent(frs-source-classifier), Agent(gitlab-frs-syncer
 
 <HARD-GATE>
 - Do NOT generate any FRS until `confirmed_module_list` is resolved.
-- Do NOT proceed past Phase 0 without a verified GitLab project ID, live GitLab MCP connection, AND a built `policy` object plus the glossary and baseline snapshots (Phase 0e — snapshots `gitlab-frs-conventions.md`, `frs-glossary.md`, and `frs-platform-baseline.md` for the run).
+- Do NOT proceed past Phase 0 without a verified GitLab project ID, live GitLab MCP connection, AND a built `policy` object plus the glossary and cross-cutting-concerns snapshots (Phase 0e — snapshots `gitlab-frs-conventions.md`, the resolved `<glossary_path>`, and the resolved `<cross_cutting_path>` for the run).
 - Do NOT proceed past Phase 1 without a `source_manifest`. If the classifier flags an existing FRS by structural match against `frs-template.md`'s Canonical Section List, HALT and redirect to `skill:review-frs`.
 - Do NOT accept a classifier return where `traversed_imports` is empty AND any code source contains relative imports — this is the regression mode; re-dispatch with the traversal-failure note.
 - Do NOT create milestones inside the FRS loop — all in Phase 3, idempotent.
@@ -79,7 +79,7 @@ Do NOT use for: reviewing existing FRS (`skill:review-frs`), technical design (`
 
 Complete in order:
 
-0. **Preflight** — verify `gitlab_project_id` in `CLAUDE.md`, GitLab MCP connectivity, the **six** shared references in `.claude/shared/` exist, two subagents present in `.claude/agents/` (`frs-source-classifier`, `gitlab-frs-syncer`), and **build the `policy` payload from `gitlab-frs-conventions.md` plus snapshot `frs-glossary.md` and `frs-platform-baseline.md`** (Phase 0e — capturing the conventions the syncer applies and the glossary / baseline versions stamped into every Validation Log's audit reproducibility set).
+0. **Preflight** — verify `gitlab_project_id` in `CLAUDE.md`, GitLab MCP connectivity, the **four** plugin-owned shared references in `.claude/shared/` exist (`frs-template.md`, `frs-validation-rules.md`, `frs-code-extraction-rules.md`, `gitlab-frs-conventions.md`), the two project-owned references resolved from `CLAUDE.md` (`glossary_path` defaulting to `docs/glossary.md`, `cross_cutting_path` defaulting to `docs/cross-cutting-concerns.md`) exist, two subagents present in `.claude/agents/` (`frs-source-classifier`, `gitlab-frs-syncer`), and **build the `policy` payload from `gitlab-frs-conventions.md` plus snapshot the resolved glossary and cross-cutting-concerns files** (Phase 0e — capturing the conventions the syncer applies and the glossary / cross-cutting versions stamped into every Validation Log's audit reproducibility set).
 1. **Source Classification** — dispatch `frs-source-classifier` subagent to build `source_manifest`. Verify the traversal guardrail. Redirect on existing-FRS structural match.
 2. **Parse & Module Resolution** — scope gate (>3 modules / >12 FRS), confirm modules via `AskUserQuestion`.
 3. **Manifest & Milestones** — initials (collision gate via `AskUserQuestion`), cross-session FRS-ID collision check, build manifest, dispatch `gitlab-frs-syncer` once per module for milestones with `policy` in payload.
@@ -105,8 +105,8 @@ Read on demand. The runbook embeds the drafter and validator guidance.
 |---|---|---|
 | `.claude/shared/frs-template.md` | The canonical section list and template body — the single source for "what sections an FRS contains, in what order" | Once at the start of each module's draft loop (Phase 4) |
 | `.claude/shared/frs-validation-rules.md` | Self-Review checklist + validation log format (with schema versioning), Skill Constraint, NFR Rubric, Bundling Detection, Severity Guide, AC↔FR traceability rule, OQ tag taxonomy | Once at the start of each module's draft loop (Phase 4) |
-| `.claude/shared/frs-glossary.md` | Project-wide domain term definitions; FRS Section 3 references but never restates | Snapshotted ONCE at Phase 0e (version captured); accessible during the run |
-| `.claude/shared/frs-platform-baseline.md` | Platform-wide NFRs, audit defaults, session policy; FRS Sections 7 / 18 / 19 reference but never restate | Snapshotted ONCE at Phase 0e (version captured); accessible during the run |
+| `<glossary_path>` (project-owned; default `docs/glossary.md`) | Project-wide domain term definitions; FRS Section 4 references but never restates. Curated by `agent:glossary-curator` (NOT dispatched at runtime — the orchestrator snapshots the file at Phase 0e). | Snapshotted ONCE at Phase 0e (version captured); accessible during the run |
+| `<cross_cutting_path>` (project-owned; default `docs/cross-cutting-concerns.md`) | Project-wide NFRs, audit defaults, session policy; FRS Sections 7 / 18 / 19 reference but never restate. Curated by `agent:cross-cutting-curator` (NOT dispatched at runtime — the orchestrator snapshots the file at Phase 0e). | Snapshotted ONCE at Phase 0e (version captured); accessible during the run |
 | `.claude/shared/gitlab-frs-conventions.md` | Approved labels, FRS-ID pattern, milestone format, conditional label rules | Once at Phase 0e to build the `policy` payload that travels with every write-mode syncer dispatch. The syncer does NOT load this file itself. |
 | `.claude/shared/frs-code-extraction-rules.md` | Code-source signal-to-FRS mapping, traversal guardrail, `[inferred from code]` propagation, logical source names | Read by `frs-source-classifier` subagent only — orchestrator does not load |
 
@@ -123,6 +123,8 @@ For maintainer touch-points (when changing a section, adding a Self-Review item,
 
 Inline drafting + inline validation in the orchestrator means: **no per-FRS subagent overhead**. Shared references load once at the start of each module's draft loop, not per FRS. Dispatch-prompt references load once at module entry.
 
+**Note:** `agent:glossary-curator` and `agent:cross-cutting-curator` exist for maintenance of `docs/glossary.md` and `docs/cross-cutting-concerns.md` respectively. They are NEVER dispatched during a generate-frs run — the orchestrator snapshots both files at Phase 0e and uses those snapshots for the run's lifetime. The curators are surfaced here for maintainer awareness only; invoke them directly outside of generate-frs runs.
+
 ## Common Mistakes
 
 ❌ Treating React code as prose → run `frs-source-classifier` first.
@@ -132,9 +134,9 @@ Inline drafting + inline validation in the orchestrator means: **no per-FRS suba
 ❌ Asking the user a question in prose → use `AskUserQuestion`. Always.
 ❌ Skipping the validation log emission at 4c.ii because "the FRS looks fine" → the log IS the audit trail; without it, the spot-check gate has nothing to show.
 ❌ Dispatching the syncer without the `policy` field "to save tokens" → the policy is what saves the tokens; the syncer no longer reads conventions itself.
-❌ Loading `gitlab-frs-conventions.md`, `frs-glossary.md`, or `frs-platform-baseline.md` mid-run "to double-check" → re-read Phase 0e. The snapshot taken there is authoritative for the run.
-❌ Restating platform-baseline content in an FRS Section 18 or 19 → reference, don't copy. Self-Review item `baseline-not-duplicated` will catch it.
-❌ Restating glossary definitions in an FRS Section 3 → list term names only; the glossary file owns definitions. Self-Review item `glossary-resolves` checks both directions.
+❌ Loading `gitlab-frs-conventions.md`, the resolved glossary file, or the resolved cross-cutting-concerns file mid-run "to double-check" → re-read Phase 0e. The snapshot taken there is authoritative for the run.
+❌ Restating cross-cutting-concerns content in an FRS Section 18 or 19 → reference, don't copy. Self-Review item `baseline-not-duplicated` will catch it (mnemonic preserved for backward compatibility).
+❌ Restating glossary definitions in an FRS Section 4 → list term names only; the glossary file owns definitions. Self-Review item `glossary-resolves` checks both directions.
 
 ## Red Flags
 
@@ -152,7 +154,7 @@ If a user gate response is ambiguous, re-present with clarifying options.
 
 ## Integration
 
-**Required before:** `gitlab_project_id` in `CLAUDE.md`, live GitLab MCP, the **six** shared references in `.claude/shared/`, and the two subagents in `.claude/agents/` (`frs-source-classifier` and `gitlab-frs-syncer`).
+**Required before:** `gitlab_project_id` in `CLAUDE.md`, live GitLab MCP, the **four** plugin-owned shared references in `.claude/shared/` (`frs-template.md`, `frs-validation-rules.md`, `frs-code-extraction-rules.md`, `gitlab-frs-conventions.md`), the two project-owned references resolved from `CLAUDE.md` (`glossary_path` defaulting to `docs/glossary.md`, `cross_cutting_path` defaulting to `docs/cross-cutting-concerns.md`), and the two subagents in `.claude/agents/` (`frs-source-classifier` and `gitlab-frs-syncer`).
 
 **vs. skill:review-frs:** this skill writes new FRS. `review-frs` audits existing ones. Both share `frs-validation-rules.md` as canonical contract — never duplicate it.
 

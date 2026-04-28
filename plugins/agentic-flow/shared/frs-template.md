@@ -15,9 +15,9 @@ This reference defines structure only; it does not define rules. For validation 
 Every FRS contains every section in this list, in this exact order. The numbered names below are the contract — both the names and the order. Capitalisation differences in headers are tolerated; ordering is strict; missing sections are a Blocker; spurious sections (sections not in this list) are a Major.
 
 1. **Purpose**
-2. **Scope**
-3. **Glossary References**
-4. **Assumptions**
+2. **Assumptions**
+3. **Scope**
+4. **Glossary References**
 5. **Actors**
 6. **Preconditions**
 7. **Dependencies**
@@ -62,39 +62,38 @@ One paragraph. What business operation does this spec describe, and why does it 
 
 ---
 
-## 2. Scope
+## 2. Assumptions
+
+Load-bearing facts taken as true by this operation but NOT validated by it. Distinct from preconditions — preconditions are checked at runtime; assumptions are accepted at design time. State each assumption as a single declarative sentence; if any assumption later proves false, this FRS must be revisited.
+
+- Assumption 1.
+- Assumption 2.
+
+*If none apply: write "None."*
+
+---
+
+## 3. Scope
 
 **In scope:** What this FRS covers.
+
 **Out of scope:** What it explicitly does not cover (adjacent operations, downstream processes, technical concerns).
 
 **Multi-tenancy / localization disclosure** *(when relevant):* state whether this operation is scoped per tenant / per entity, and whether multi-language support is in or out of scope. Omit the sub-block when the operation has no multi-tenant or localization considerations.
 
 ---
 
-## 3. Glossary References
+## 4. Glossary References
 
-Domain terms used in this FRS, defined once in the project glossary (`.claude/shared/frs-glossary.md`). List only the terms used in the body of this FRS. Do NOT redefine them here.
+Domain terms used in this FRS, defined once in the project glossary (`docs/glossary.md`). List only the terms used in the body of this FRS. Do NOT redefine them here.
 
 - [Term A]
 - [Term B]
 - [Term C]
 
-*If the FRS uses no domain-specific terms (rare), state "None — only platform-baseline vocabulary used."*
+*If the FRS uses no domain-specific terms (rare), state "None — only cross-cutting vocabulary used."*
 
-A term used in the body must appear here, and a term listed here must resolve to an entry in `frs-glossary.md`. Self-Review item *glossary-resolves* enforces both directions.
-
----
-
-## 4. Assumptions
-
-Load-bearing facts taken as true by this operation but NOT validated by it. Distinct from preconditions — preconditions are checked at runtime; assumptions are accepted at design time.
-
-State each assumption as a single declarative sentence. If any assumption later proves false, this FRS must be revisited.
-
-- Assumption 1.
-- Assumption 2.
-
-*If none apply: write "None."*
+A term used in the body must appear here, and a term listed here must resolve to an entry in `docs/glossary.md`. Self-Review item *glossary-resolves* enforces both directions.
 
 ---
 
@@ -131,11 +130,11 @@ Other operations, approvals, or external parties this operation depends on befor
 *Types: **Upstream** = must complete before this operation starts. **Parallel** = runs alongside this operation. **Downstream** = triggered by this operation's successful completion. Note: a Downstream relation is NOT a dependency of this FRS — list it only as "triggers FRS-YY on success" in postconditions, never in this section. State "None" if no inter-FRS dependencies exist.*
 
 **System & Technical Dependencies:**
-- **Platform baseline applies** — see `.claude/shared/frs-platform-baseline.md`. Cite the specific baseline categories invoked (e.g., Authentication & Authorization, Session Management, Audit Logging Defaults). Do NOT restate baseline content here.
+- **Cross-cutting concerns apply** — see `docs/cross-cutting-concerns.md`. Cite the specific categories invoked (e.g., Authentication & Authorization, Session Management, Audit Logging Defaults). Do NOT restate cross-cutting content here.
 - **Entity Context** *(if applicable)* — what data or access is required.
 - [other operation-specific system dependencies in business-visible terms]
 
-*This section is mandatory. If no inter-FRS dependencies exist, state "None" explicitly. Never omit the section. The platform-baseline reference is a forward reference, not a copy — restating baseline content is a Self-Review failure on item *baseline-not-duplicated*.*
+*This section is mandatory. If no inter-FRS dependencies exist, state "None" explicitly. Never omit the section. The cross-cutting-concerns reference is a forward reference, not a copy — restating that content is a Self-Review failure on item *baseline-not-duplicated* (mnemonic preserved for backward compatibility).*
 
 ---
 
@@ -218,7 +217,7 @@ Notifications this operation sends, to whom, and why. A dedicated section becaus
 |-----------|---------|---------|-----------------|
 | [Actor or role] | [What event in this operation triggers the notification] | [In-application / email / queue / other — described in business terms, not technical channel names] | [Why the recipient needs to know] |
 
-Describe the channel in business-visible terms ("in-application confirmation", "Bank Legal Officer review queue") rather than technical surfaces ("WebSocket push", "SMTP via SendGrid"). The business reason is mandatory — silent notifications are not auditable.
+Describe the channel in business-visible terms ("in-application confirmation", "Bank Legal Officer review queue") rather than technical surfaces ("WebSocket push", "SMTP via SendGrid"). Capturing a business reason is mandatory for notifications triggered by a state change or approval decision — these are auditable events. For purely informational notifications (e.g., a confirmation that a read-only view was accessed), a reason may be omitted; state "informational only" in the Why column instead.
 
 *Omit section if the operation produces no notifications. Read-only operations and simple validations frequently do not.*
 
@@ -270,7 +269,7 @@ ACs describe **observables** — what a tester or stakeholder can verify by insp
 
 ## 18. Non-Functional Requirements
 
-Operation-specific NFRs only. Platform-wide NFRs (performance defaults, availability, retention, session policy, encryption) are inherited from `.claude/shared/frs-platform-baseline.md` and MUST NOT be restated here. State a forward reference at the top of this section ("Platform baseline applies — see `frs-platform-baseline.md` § …") and list only NFRs that deviate from or extend the baseline for this specific operation.
+Operation-specific NFRs only. Project-wide NFRs (performance defaults, availability, retention, session policy, encryption) are inherited from `docs/cross-cutting-concerns.md` and MUST NOT be restated here. State a forward reference at the top of this section ("Cross-cutting concerns apply — see `docs/cross-cutting-concerns.md` § …") and list only NFRs that deviate from or extend the cross-cutting defaults for this specific operation.
 
 | Category | Requirement |
 |----------|-------------|
@@ -278,20 +277,20 @@ Operation-specific NFRs only. Platform-wide NFRs (performance defaults, availabi
 | Data Retention | e.g., submitted records retained for a period beyond the platform default, per regulation X |
 | Availability | e.g., this operation must be available outside the platform's standard service window |
 
-*Omit the table if no operation-specific NFRs apply beyond baseline; the forward reference to the baseline is sufficient. NFRs in this section that pass the NFR Rubric check (see `frs-validation-rules.md`) but duplicate baseline content are a Self-Review failure on item *baseline-not-duplicated*.*
+*Omit the table if no operation-specific NFRs apply beyond the cross-cutting defaults; the forward reference is sufficient. NFRs in this section that pass the NFR Rubric check (see `frs-validation-rules.md`) but duplicate cross-cutting content are a Self-Review failure on item *baseline-not-duplicated*.*
 
 ---
 
 ## 19. Auditability
 
-Audit-relevant aspects of this operation. Platform baseline (`frs-platform-baseline.md` § Audit Logging Defaults) applies; the items below are operation-specific.
+Audit-relevant aspects of this operation. Cross-cutting concerns (`docs/cross-cutting-concerns.md` § Audit Logging Defaults) apply; the items below are operation-specific.
 
 - **Logged per attempt:** [actor identity, key business identifiers, outcome (accepted / refused / failed), timestamp, plus any operation-specific fields the audit trail must capture verbatim — e.g., a rationale, a reason code, a captured policy version].
 - **Logged per accepted attempt additionally:** [resulting record identifier, downstream queue entry, etc., when applicable].
 - **Access:** which roles may review the audit trail for this operation, and at what scope (all entries, own entries, entries within their review queue).
-- **Retention beyond baseline:** state "N/A — platform baseline retention is sufficient" with a one-line rationale, OR specify the extended retention required and the regulatory / policy basis.
+- **Retention beyond baseline:** state "N/A — cross-cutting retention is sufficient" with a one-line rationale, OR specify the extended retention required and the regulatory / policy basis.
 
-*If this operation is read-only and produces no audit trail beyond platform baseline access logs, state "Platform baseline applies; no operation-specific audit obligations" and omit the bullet structure above. Never omit the section heading — its absence is a Blocker.*
+*If this operation is read-only and produces no audit trail beyond cross-cutting access logs, state "Cross-cutting concerns apply; no operation-specific audit obligations" and omit the bullet structure above. Never omit the section heading — its absence is a Blocker.*
 
 ---
 
@@ -345,3 +344,12 @@ The tag drives downstream behaviour: any `[blocking]` or `[deferred]` OQ causes 
 The `Source` column is mandatory on the v1.0 row — it is what makes regeneration and downstream traceability possible.
 
 **Logical name format:** alongside each file path, include `(logical: <Module>.<Area>.<Name>)`. The logical name is a stable identifier independent of the file path, so renames or refactors do not sever traceability. The classifier emits these alongside paths in its source manifest (see `frs-source-classifier.md`); the drafter copies them verbatim into this section.
+
+---
+
+## Template Revision History
+
+| Version | Date | Changes |
+|---------|------|---------|
+| 2.0 | 2026-04-28 | Section 4 (Assumptions) moved to position 2 as a standalone section; Sections 2 (Scope) and 3 (Glossary References) shifted to positions 3 and 4 respectively; Sections 5–23 unchanged. Section 14 (Notifications) wording softened. Canonical Section List remains 23 entries. |
+| 1.0 | (prior) | Initial canonical section list — 23 sections. |

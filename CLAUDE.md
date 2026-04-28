@@ -63,5 +63,16 @@ release-readiness (→ RELEASE_NOTES.md, READINESS_REPORT.md)
 | RELEASE_NOTES.md | Local file | 8 | `docs/releases/<version>/` |
 | READINESS_REPORT.md | Local file | 8 | `docs/releases/<version>/` |
 
+## Configuration
+
+Project-owned paths consumed by FRS skills (see `plugins/agentic-flow/skills/generate-frs/references/phase-runbook.md` § Phase 0e):
+
+```yaml
+glossary_path: docs/glossary.md
+cross_cutting_path: docs/cross-cutting-concerns.md
+```
+
+If either key is omitted, the orchestrator falls back to these same paths as defaults. If neither resolves, Phase 0e halts with a path-specific error.
+
 ## Note
 - Append a commit message at the end of your response if you made changes to the current repository.

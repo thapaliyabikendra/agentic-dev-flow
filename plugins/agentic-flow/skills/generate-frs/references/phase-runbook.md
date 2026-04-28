@@ -56,24 +56,36 @@ Store as `gitlab_project_id`.
 
 **0b. GitLab MCP connectivity.** Verify a GitLab MCP tool is available. If not → halt: *"No GitLab MCP connection is available. Please connect a GitLab MCP server, then re-run."* This skill does NOT generate FRS offline. (No user input — environment problem; halt.)
 
-**0c. Shared references present.** Verify the six files in `.claude/shared/` exist:
+**0c. Plugin shared references present.** Verify the four plugin-owned files in `.claude/shared/` exist:
 
 - `.claude/shared/frs-template.md`
 - `.claude/shared/frs-validation-rules.md`
 - `.claude/shared/frs-code-extraction-rules.md`
 - `.claude/shared/gitlab-frs-conventions.md`
-- `.claude/shared/frs-glossary.md`
-- `.claude/shared/frs-platform-baseline.md`
 
 Missing any → halt with the specific path: *"Shared reference `<path>` is not present. Install it before re-running."*
 
+The project-owned glossary and cross-cutting-concerns files are resolved at Phase 0e from `CLAUDE.md`; their existence is verified there, not here.
+
 **0d. Subagents present.** Verify `.claude/agents/gitlab-frs-syncer.md` and `.claude/agents/frs-source-classifier.md` exist. Missing either → halt with the specific path. (Note: previous architecture had `frs-drafter` and `frs-validator` subagents and a separate `frs-template` / `frs-validation-rules` etc. as skills. All five are removed in the current architecture. The classifier was previously a forked skill at `.claude/skills/frs-source-classifier/`; it is now a subagent.)
 
-**0e. Build the syncer policy payload AND snapshot the shared references.** Read these three files ONCE:
+**0e. Build the syncer policy payload AND snapshot the project references.** Resolve the project-owned reference paths from `CLAUDE.md`:
+
+- `glossary_path` (default: `docs/glossary.md`)
+- `cross_cutting_path` (default: `docs/cross-cutting-concerns.md`)
+
+If `CLAUDE.md` does not declare either key, fall back to the defaults above. Verify both resolved files exist; if either is missing, halt with the path-specific directed message:
+
+- For a missing glossary file: *"Project reference `<resolved glossary path>` is not present. Run `agent:glossary-curator` with operation `Initialize` to seed it from the plugin template, or update `CLAUDE.md`'s `glossary_path` key to point at an existing file. Then re-run."*
+- For a missing cross-cutting-concerns file: *"Project reference `<resolved cross-cutting path>` is not present. Run `agent:cross-cutting-curator` with operation `Initialize` to seed it from the plugin template, or update `CLAUDE.md`'s `cross_cutting_path` key to point at an existing file. Then re-run."*
+
+The orchestrator does NOT auto-seed mid-run. Seeding is a deliberate, audit-logged operation done by the curator before the run. This preserves Phase 0e's "the run uses what existed at start" snapshot guarantee.
+
+Then read these three files ONCE:
 
 - `.claude/shared/gitlab-frs-conventions.md` — to build the `policy` payload
-- `.claude/shared/frs-glossary.md` — to snapshot the project glossary
-- `.claude/shared/frs-platform-baseline.md` — to snapshot the platform baseline
+- `<glossary_path>` — to snapshot the project glossary
+- `<cross_cutting_path>` — to snapshot the cross-cutting concerns
 
 From `gitlab-frs-conventions.md`, extract five constants:
 
@@ -87,15 +99,15 @@ From `gitlab-frs-conventions.md`, extract five constants:
 
 Store these as the `policy` object. From this point forward, every write-mode syncer dispatch carries the `policy` field in its payload. The syncer applies it (cheap) instead of loading the full conventions file (expensive).
 
-From `frs-glossary.md` and `frs-platform-baseline.md`, capture the version numbers (from each file's Revision History). Store as `glossary_version` and `baseline_version`. These are written into every Validation Log's audit reproducibility set (Phase 4c.ii) so a later auditor can reconstruct exactly which contracts the FRS was generated against.
+From the resolved glossary and cross-cutting-concerns files, capture the version numbers (from each file's Revision History). Store as `glossary_version` and `baseline_version` — the variable names are preserved for backward compatibility with prior validation logs. These are written into every Validation Log's audit reproducibility set (Phase 4c.ii) so a later auditor can reconstruct exactly which contracts the FRS was generated against.
 
-Both files stay accessible in working memory through the run — the drafter consults the glossary when populating Section 3 of each FRS, and the baseline when writing Section 7 / 18 / 19 forward references. The validator's `glossary-resolves` and `baseline-not-duplicated` Self-Review checks consult them too.
+Both files stay accessible in working memory through the run — the drafter consults the glossary when populating Section 4 of each FRS, and the cross-cutting-concerns file when writing Section 7 / 18 / 19 forward references. The validator's `glossary-resolves` and `baseline-not-duplicated` Self-Review checks consult them too.
 
 This is the **single point of conventions enforcement per run**. If any of these three files change mid-run, the run uses the snapshot taken here. To pick up a change, restart the run.
 
 Also initialize `validation_logs = {}` in session state. This dict is populated by Phase 4c.ii (one compact log per FRS) and replaced on revision at Phase 4e. It is carried forward across inter-module checkpoints (Phase 5 Resume Block) so a halted run resumes with prior modules' validation history intact.
 
-**Verify:** all five preflight checks pass; `gitlab_project_id` is set; `policy` object is built; `glossary_version` and `baseline_version` captured; `validation_logs = {}` initialized.
+**Verify:** all five preflight checks pass; `gitlab_project_id` is set; `policy` object is built; both project-reference paths resolved (from `CLAUDE.md` or defaults) and the files exist; `glossary_version` and `baseline_version` captured; `validation_logs = {}` initialized.
 
 ---
 
@@ -270,11 +282,11 @@ This is the heart of the architecture. Per module — not per FRS — the orches
 ```
 Read('.claude/shared/frs-template.md')           # canonical section list + body skeleton
 Read('.claude/shared/frs-validation-rules.md')   # Self-Review checklist + log format
-Read('.claude/shared/frs-glossary.md')           # already snapshotted at Phase 0e — re-Read only if dropped
-Read('.claude/shared/frs-platform-baseline.md')  # already snapshotted at Phase 0e — re-Read only if dropped
+Read(<glossary_path>)                        # already snapshotted at Phase 0e — re-Read only if dropped
+Read(<cross_cutting_path>)                   # already snapshotted at Phase 0e — re-Read only if dropped
 ```
 
-The template and validation rules MUST be in working memory for every FRS in this module — Read them at module entry and do NOT re-read per FRS. The glossary and baseline were captured at Phase 0e; re-Read only if they've been actively dropped from context.
+The template and validation rules MUST be in working memory for every FRS in this module — Read them at module entry and do NOT re-read per FRS. The glossary and cross-cutting-concerns files were captured at Phase 0e; re-Read only if they've been actively dropped from context.
 
 These four files together are the contract the drafter and inline validator apply across the whole module loop. Reload only on module change if you've actively dropped them.
 
@@ -367,9 +379,9 @@ Integrate:
 - Module OQ resolutions from 4b → embedded in relevant sections; the resolution either confirms (strip `[inferred from code]` tag), revises (strip and rewrite), or defers (retain tag, log as Section 22 OQ with `[blocking]` / `[post-approval]` taxonomy tag)
 - Skill Constraint floor: ≥2 business rules, ≥2 edge cases, ≥1 exception flow. Simple operations have unstated policy rules — infer them.
 
-**Glossary references (Section 3):** list every project-glossary term used in the body. Do not redefine them — `frs-glossary.md` is the single source. Self-Review item *glossary-resolves* checks both directions (terms used in body must be in Section 3; terms in Section 3 must resolve to a glossary entry).
+**Glossary references (Section 4):** list every project-glossary term used in the body. Do not redefine them — `docs/glossary.md` is the single source. Self-Review item *glossary-resolves* checks both directions (terms used in body must be in Section 4; terms in Section 4 must resolve to a glossary entry).
 
-**Platform-baseline references (Section 7 system half, Section 18 NFR, Section 19 Auditability):** state the baseline forward reference and cite the categories invoked. Do NOT restate baseline content. Section 18 contains operation-specific NFRs only; Section 19 contains operation-specific audit obligations only. Self-Review item *baseline-not-duplicated* enforces.
+**Cross-cutting-concerns references (Section 7 system half, Section 18 NFR, Section 19 Auditability):** state the forward reference to `docs/cross-cutting-concerns.md` and cite the categories invoked. Do NOT restate cross-cutting content. Section 18 contains operation-specific NFRs only; Section 19 contains operation-specific audit obligations only. Self-Review item *baseline-not-duplicated* enforces (the mnemonic name is preserved for backward compatibility with prior logs).
 
 **AC ↔ FR traceability (Sections 16, 17):** every Must-priority FR must be cited by ≥1 AC; every AC must trace to ≥1 FR via the `Traces to` column. Self-Review item *ac-fr-traceable* enforces.
 
@@ -388,11 +400,11 @@ Populate the audit reproducibility set on every log:
 - Commit: from the source manifest
 - Validation rules version: from the rules file's revision history
 - Glossary version: from `glossary_version` (Phase 0e)
-- Platform baseline version: from `baseline_version` (Phase 0e)
+- Cross-cutting concerns version: from `baseline_version` (Phase 0e — variable name preserved for backward compatibility)
 
 Two operating rules:
 
-- **Items 3 (no-tech, including interaction mechanisms), 9 (NFR rubric), 13 (baseline-not-duplicated), and 14 (AC-FR traceability) are the most commonly rubber-stamped.** Re-read every step in Section 10 and every entry in Section 18 before marking 3 or 9 as `P`. For 13, re-read Sections 18 and 19 — any restatement of baseline content must be replaced with a forward reference. For 14, cross-check every Must-priority FR has an AC that cites it AND every AC's `Traces to` column references a real FR.
+- **Items 3 (no-tech, including interaction mechanisms), 9 (NFR rubric), 13 (baseline-not-duplicated), and 14 (AC-FR traceability) are the most commonly rubber-stamped.** Re-read every step in Section 10 and every entry in Section 18 before marking 3 or 9 as `P`. For 13, re-read Sections 18 and 19 — any restatement of cross-cutting content must be replaced with a forward reference. For 14, cross-check every Must-priority FR has an AC that cites it AND every AC's `Traces to` column references a real FR.
 - **A `P` is a claim, not a wish.** If the rule technically passes but the drafter had to fix something to get there, the entry is `R` (revised), not `P`. The verbatim original quote on the `R` line is the audit trail.
 
 The log emission cost is small (typically 8–10 lines for clean, 14–25 with one revision) and the orchestrator carries it forward to Phase 4d.0.
@@ -652,11 +664,11 @@ The validation-rules file is loaded once at module entry (Phase 4) and stays in 
 
 | From → To | Artifact |
 |---|---|
-| Phase 0 → all later | `gitlab_project_id`, `policy` (approved_labels, default_labels, frs_id_pattern, milestone_description_template, conditional_label_rules), `glossary_version`, `baseline_version` |
+| Phase 0 → all later | `gitlab_project_id`, `policy` (approved_labels, default_labels, frs_id_pattern, milestone_description_template, conditional_label_rules), `glossary_path`, `cross_cutting_path`, `glossary_version`, `baseline_version` |
 | Phase 1 → 2 | `source_manifest` (sources, candidates with logical names, traversed_imports with logical names, existing_frs flag) |
 | Phase 2 → 3 | `confirmed_module_list` |
 | Phase 3 → 4 | manifest with `(module → milestone_id)` mappings |
-| Phase 4 entry | shared references `frs-template.md`, `frs-validation-rules.md`, `frs-glossary.md`, `frs-platform-baseline.md` Read |
+| Phase 4 entry | references `frs-template.md`, `frs-validation-rules.md` (plugin-owned), plus `<glossary_path>` and `<cross_cutting_path>` (project-owned) Read |
 | Phase 4a → 4b | per-module OQ list (including all `[inferred from code]` items across BR/EC/Exception/Actors/Form Fields) |
 | Phase 4b → 4c | `module_oq_resolutions` |
 | Phase 4c.i → 4c.ii | full FRS body in working memory |

@@ -24,7 +24,7 @@ Every FRS contains every section listed in the **Canonical Section List** at the
 | Missing section (a section listed in the template is absent) | Blocker |
 | Section out of order relative to the template | Minor |
 | Spurious section (a section heading not in the template list) | Major |
-| Empty section where "None" or a stated equivalent is valid (Section 4 Assumptions, Section 7 Inter-FRS half, Section 11 Alternative Flows, Section 14 Notifications, Section 15 Form Fields, Section 18 NFR table, Section 22 Open Questions) but neither stated nor an explanatory line provided | Major |
+| Empty section where "None" or a stated equivalent is valid (Section 2 Assumptions, Section 7 Inter-FRS half, Section 11 Alternative Flows, Section 14 Notifications, Section 15 Form Fields, Section 18 NFR table, Section 22 Open Questions) but neither stated nor an explanatory line provided | Major |
 | Empty section where "None" is NOT valid | Blocker |
 
 The "None-valid" set above is explicit — every other section must contain real content. Section 23 (Revision History) must always carry the v1.0 row with source provenance.
@@ -59,13 +59,13 @@ The numbered items below are the legend for the Validation Log status string —
 | 4 | `exception-cover` | Exception flows cover invalid input, unauthorised access, and failure / non-completion paths |
 | 5 | `business-postconds` | Postconditions stated as business outcomes, not system states |
 | 6 | `skill-constraint` | Skill Constraint met (see above) |
-| 7 | `dependencies-section` | Dependencies (Section 7) documents BOTH inter-FRS and system dependencies, with a forward reference to the platform baseline |
+| 7 | `dependencies-section` | Dependencies (Section 7) documents BOTH inter-FRS and system dependencies, with a forward reference to the cross-cutting concerns file |
 | 8 | `frs-ids-exist` | All referenced FRS IDs in Section 7 exist in the approved FRS set |
 | 9 | `nfr-rubric` | NFRs (Section 18) pass the NFR Rubric (see below) |
 | 10 | `in-module-actors` | Every actor named in Section 5 belongs to the FRS's locked module |
 | 11 | `no-cross-module` | No cross-module business rules, outcomes, or dependencies present |
-| 12 | `glossary-resolves` | Every term used in the body resolves to an entry in `frs-glossary.md`, and every term listed in Section 3 is used in the body |
-| 13 | `baseline-not-duplicated` | Section 18 (NFRs) and Section 19 (Auditability) reference the platform baseline rather than restating its content |
+| 12 | `glossary-resolves` | Every term used in the body resolves to an entry in `docs/glossary.md`, and every term listed in Section 4 is used in the body |
+| 13 | `baseline-not-duplicated` | Section 18 (NFRs) and Section 19 (Auditability) reference the cross-cutting concerns file rather than restating its content (mnemonic name preserved for backward compatibility) |
 | 14 | `ac-fr-traceable` | Every AC in Section 17 traces to ≥1 FR; every Must-priority FR in Section 16 is cited by ≥1 AC |
 
 When a new item is added to this list, the validation log status string grows by one character. No other file needs to change — the legend is authoritative.
@@ -107,7 +107,7 @@ Audit reproducibility set:
   - Commit: <sha>
   - Validation rules version: <X.Y>
   - Glossary version: <X.Y>
-  - Platform baseline version: <X.Y>
+  - Cross-cutting concerns version: <X.Y>
 
 [For each F or R, append:]
   Item <N> (<mnemonic>) — <FAILED | REVISED>
@@ -162,12 +162,12 @@ Every FRS is locked to exactly one module. Cross-module leakage is a violation:
 | Any technical detail (DB, API, framework, language, infra) | Blocker | Rewrite as business outcome |
 | Interaction mechanism in flow steps or functional requirements (drag-and-drop, double-click, hover, keyboard shortcut, swipe) | Major | Strip the mechanism; restate as business outcome — what the actor accomplishes, not how they gesture |
 | Inter-FRS dependency referencing non-existent FRS | Major | Correct FRS-ID, or strip if invalid |
-| Missing Dependencies section entirely | Blocker | Add Section 7 with at least system dependencies and the platform-baseline reference |
-| Section 18 (NFR) restates platform baseline content | Major | Replace with forward reference to `frs-platform-baseline.md`; keep only operation-specific deviations |
-| Section 19 (Auditability) restates baseline audit defaults | Major | Replace with forward reference; keep only operation-specific obligations |
-| Glossary term used in body but not listed in Section 3 | Minor | Add to Section 3 |
-| Glossary term listed in Section 3 but not used in body | Minor | Remove from Section 3 |
-| Glossary term listed in Section 3 with no entry in `frs-glossary.md` | Major | Add the term to `frs-glossary.md` (cross-FRS effect) or rename to an existing term |
+| Missing Dependencies section entirely | Blocker | Add Section 7 with at least system dependencies and the cross-cutting-concerns forward reference |
+| Section 18 (NFR) restates cross-cutting concerns content | Major | Replace with forward reference to `docs/cross-cutting-concerns.md`; keep only operation-specific deviations |
+| Section 19 (Auditability) restates cross-cutting audit defaults | Major | Replace with forward reference; keep only operation-specific obligations |
+| Glossary term used in body but not listed in Section 4 | Minor | Add to Section 4 |
+| Glossary term listed in Section 4 but not used in body | Minor | Remove from Section 4 |
+| Glossary term listed in Section 4 with no entry in `docs/glossary.md` | Major | Add the term to `docs/glossary.md` (cross-FRS effect) or rename to an existing term |
 | NFR failing the rubric (technical target in Section 18) | Major | Rewrite in business language |
 | Bundled operations (multiple operations in one FRS) | Blocker | Split into separate FRS |
 
@@ -204,23 +204,23 @@ Both consumers reference this single definition; do not duplicate the signals or
 
 ## NFR Rubric (Section 18)
 
-An NFR is valid if it describes an **experience or obligation the business owes the user** — not a technical target for engineers — AND if it is not already covered by the platform baseline.
+An NFR is valid if it describes an **experience or obligation the business owes the user** — not a technical target for engineers — AND if it is not already covered by the cross-cutting concerns file.
 
-| ✅ In business language and operation-specific | ❌ Technical in disguise, or restates baseline |
+| ✅ In business language and operation-specific | ❌ Technical in disguise, or restates cross-cutting content |
 |---|---|
 | "Effective Date precision: revisions apply at one calendar day granularity in the bank's operating timezone." | "API must respond in <200ms under 1000 RPS." |
 | "The actor's request must not be lost if they navigate away mid-submission." | "Use Redis-backed session persistence." |
-| "Confirmation must be visible within a timeframe that does not disrupt the user's task." (only if more stringent than baseline) | "All operations complete within 5 seconds" (baseline default — duplicates) |
-| "This operation must remain available outside the platform's standard service window because regulators may submit out-of-hours." | "99.95% uptime SLA, measured per calendar month" (baseline) |
-| "Revisions in this operation are retained for 10 years per regulation X" (extends baseline) | "Encrypt PII at rest with AES-256; TLS 1.3 in transit." (technical AND baseline) |
+| "Confirmation must be visible within a timeframe that does not disrupt the user's task." (only if more stringent than the cross-cutting default) | "All operations complete within 5 seconds" (cross-cutting default — duplicates) |
+| "This operation must remain available outside the platform's standard service window because regulators may submit out-of-hours." | "99.95% uptime SLA, measured per calendar month" (cross-cutting default) |
+| "Revisions in this operation are retained for 10 years per regulation X" (extends the cross-cutting default) | "Encrypt PII at rest with AES-256; TLS 1.3 in transit." (technical AND cross-cutting) |
 
-**Rule of thumb:** an NFR belongs in Section 18 if a non-technical stakeholder could meaningfully sign off on it AND the platform baseline doesn't already say it. If it reads like a ticket for an engineer or restates baseline boilerplate, it belongs elsewhere.
+**Rule of thumb:** an NFR belongs in Section 18 if a non-technical stakeholder could meaningfully sign off on it AND the cross-cutting concerns file doesn't already say it. If it reads like a ticket for an engineer or restates cross-cutting boilerplate, it belongs elsewhere.
 
 ---
 
 ## Dependencies Section Contract (Section 7)
 
-Section 7 MUST document two categories. Never omit the section — if no inter-FRS dependency exists, state "None" explicitly. Always include the platform-baseline forward reference.
+Section 7 MUST document two categories. Never omit the section — if no inter-FRS dependency exists, state "None" explicitly. Always include the cross-cutting-concerns forward reference.
 
 ### Inter-FRS Dependencies (Business)
 
@@ -238,12 +238,12 @@ Section 7 MUST document two categories. Never omit the section — if no inter-F
 
 ```
 **System & Technical Dependencies:**
-- **Platform baseline applies** — see `frs-platform-baseline.md`, specifically the [Authentication & Authorization, Session Management, Audit Logging Defaults] categories.
+- **Cross-cutting concerns apply** — see `docs/cross-cutting-concerns.md`, specifically the [Authentication & Authorization, Session Management, Audit Logging Defaults] categories.
 - **Entity Context** — [what data or access is required, when operation-specific].
 - [other system dependencies]
 ```
 
-The platform-baseline reference is mandatory. System dependencies named here in addition are operation-specific only — anything covered by baseline is referenced, not restated.
+The cross-cutting-concerns reference is mandatory. System dependencies named here in addition are operation-specific only — anything covered by the cross-cutting file is referenced, not restated.
 
 ---
 
@@ -321,7 +321,7 @@ When applying these rules, classify each violation:
 **✅ "The actor is notified of the outcome via their preferred notification channel."**
 
 **❌ "Use Redis to cache session state for 30 minutes"** — technical NFR.
-**✅ "The actor's session must remain active for a reasonable duration such that they can complete typical tasks without re-authenticating."** *(and only if this deviates from platform baseline; otherwise reference the baseline.)*
+**✅ "The actor's session must remain active for a reasonable duration such that they can complete typical tasks without re-authenticating."** *(and only if this deviates from `docs/cross-cutting-concerns.md`; otherwise reference the file.)*
 
 **❌ "The Bank Admin uses drag-and-drop to set a complete new section order"** — interaction mechanism.
 **✅ "The Bank Admin sets a complete new section ordering. The system applies the new order to all subsequent verification sessions."**
@@ -347,3 +347,4 @@ When applying these rules, classify each violation:
 |--------|------|---------|
 | 1.0 | 2026-04-01 | Initial validation contract |
 | 2.0 | 2026-04-28 | Section list externalised to `frs-template.md`; Self-Review extended to 14 items (added `glossary-resolves`, `baseline-not-duplicated`, `ac-fr-traceable`); validation log gains schema version + audit reproducibility set; AC↔FR traceability mandate; OQ tag taxonomy; `[inferred from code]` propagation across BR/EC/Exception/Actors/Form Fields; new severity rows for Auditability and Glossary |
+| 3.0 | 2026-04-28 | None-valid set updated to reflect Section 4 (Assumptions) moving to position 2 as a standalone section; Sections 2 and 3 (Scope, Glossary References) shifted to positions 3 and 4; Sections 5–23 unchanged. Mnemonic names (`baseline-not-duplicated`) preserved for backward compatibility. |
