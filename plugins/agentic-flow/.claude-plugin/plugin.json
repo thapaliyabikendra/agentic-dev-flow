@@ -1,6 +1,6 @@
 {
   "name": "agentic-flow",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Agentic flow plugin for generating frs, feat spec and implementing feature.",
   "author": {
     "name": "Bikendra Thapaliya",
