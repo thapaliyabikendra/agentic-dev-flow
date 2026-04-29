@@ -68,8 +68,17 @@ Add this repo as a marketplace, then install the plugin:
 # Step 1: add the marketplace
 /plugin marketplace add thapaliyabikendra/agentic-dev-flow
 
-# Step 2: install the plugin
-/plugin install agentic-dev-flow@agentic-dev-flow
+# Step 2: install one or more plugins
+# Format: <plugin-name>@<marketplace-name>
+/plugin install agentic-dev-flow@agentic-dev-flow   # core 8-phase workflow
+/plugin install agentic-flow@agentic-dev-flow       # FRS / feat-spec / impl
+/plugin install agentic-wiki@agentic-dev-flow       # knowledge ingest + query
+```
+
+If install fails after a marketplace.json change, refresh the cache:
+
+```bash
+/plugin marketplace update agentic-dev-flow
 ```
 
 ### Local development / testing
