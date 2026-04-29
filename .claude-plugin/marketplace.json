@@ -1,87 +1,38 @@
 {
   "name": "agentic-dev-flow",
-  "version": "1.1.0",
-  "description": "Agentic development workflow plugins for intelligent task planning, dependency mapping, and knowledge management.",
-  "license": "MIT",
-  "homepage": "https://github.com/thapaliyabikendra/agentic-dev-flow",
-  "repository": "https://github.com/thapaliyabikendra/agentic-dev-flow",
   "owner": {
     "name": "Bikendra Thapaliya",
-    "email": "thapaliyabikendra@gmail.com"
+    "email": "thapaliyabikendra@gmail.com",
+    "url": "https://github.com/thapaliyabikendra"
+  },
+  "metadata": {
+    "description": "Agentic development workflow plugins for intelligent task planning, dependency mapping, and knowledge management.",
+    "version": "1.1.0"
   },
   "plugins": [
     {
       "name": "agentic-dev-flow",
-      "version": "1.0.0",
-      "description": "Core agentic workflow plugin for intelligent task planning, breakdown, and orchestration using sub-agents.",
       "source": "./plugins/agentic-dev-flow",
-      "author": {
-        "name": "Bikendra Thapaliya",
-        "email": "thapaliyabikendra@gmail.com"
-      },
-      "license": "MIT",
-      "homepage": "https://github.com/thapaliyabikendra/agentic-dev-flow",
-      "repository": "https://github.com/thapaliyabikendra/agentic-dev-flow",
+      "description": "Core agentic workflow plugin for intelligent task planning, breakdown, and orchestration using sub-agents.",
+      "version": "1.0.0",
       "category": "productivity",
-      "keywords": [
-        "agentic",
-        "task-planning",
-        "project-management",
-        "developer-tools",
-        "productivity",
-        "ai-assistant"
-      ]
+      "keywords": ["agentic", "task-planning", "project-management", "developer-tools", "productivity", "ai-assistant"]
     },
     {
       "name": "agentic-wiki",
-      "version": "1.0.0",
-      "description": "Knowledge system plugin for ingesting data, synthesizing structured knowledge, and enabling semantic querying across workflows.",
       "source": "./plugins/wiki",
-      "author": {
-        "name": "Bikendra Thapaliya",
-        "email": "thapaliyabikendra@gmail.com"
-      },
-      "license": "MIT",
-      "homepage": "https://github.com/thapaliyabikendra/agentic-dev-flow",
-      "repository": "https://github.com/thapaliyabikendra/agentic-dev-flow",
+      "description": "Knowledge system plugin for ingesting data, synthesizing structured knowledge, and enabling semantic querying across workflows.",
+      "version": "1.0.0",
       "category": "productivity",
-      "keywords": [
-        "agentic",
-        "wiki",
-        "knowledge-base",
-        "documentation",
-        "memory",
-        "semantic-search",
-        "sdlc",
-        "ai-assistant"
-      ]
+      "keywords": ["agentic", "wiki", "knowledge-base", "documentation", "memory", "semantic-search", "sdlc", "ai-assistant"]
     },
     {
       "name": "agentic-flow",
-      "version": "1.1.0",
-      "description": "Agentic flow plugin for generating frs, feat spec and implementing feature.",
       "source": "./plugins/agentic-flow",
-      "author": {
-        "name": "Bikendra Thapaliya",
-        "email": "thapaliyabikendra@gmail.com",
-        "url": "https://github.com/thapaliyabikendra"
-      },
-      "homepage": "https://github.com/thapaliyabikendra/agentic-dev-flow",
-      "repository": "https://github.com/thapaliyabikendra/agentic-dev-flow",
-      "license": "MIT",
+      "description": "Agentic flow plugin for generating FRS, feature specs, and implementing features.",
+      "version": "1.1.0",
       "category": "productivity",
-      "keywords": [
-        "claude-code",
-        "claude-code-plugin",
-        "agentic",
-        "wiki",
-        "knowledge-base",
-        "documentation",
-        "memory",
-        "semantic-search",
-        "sdlc",
-        "ai-assistant"
-      ]
+      "keywords": ["claude-code", "claude-code-plugin", "agentic", "frs", "feature-spec", "sdlc", "ai-assistant"]
     }
   ]
 }
