@@ -12,6 +12,14 @@
   },
   "plugins": [
     {
+      "name": "agentic-dev-flow",
+      "source": "./plugins/agentic-dev-flow",
+      "description": "Core agentic workflow plugin for intelligent task planning, breakdown, and orchestration using sub-agents.",
+      "category": "productivity",
+      "tags": ["agentic", "task-planning", "project-management", "developer-tools", "productivity", "ai-assistant"],
+      "author": { "name": "Bikendra Thapaliya" }
+    },
+    {
       "name": "agentic-wiki",
       "source": "./plugins/wiki",
       "description": "Knowledge system plugin for ingesting data, synthesizing structured knowledge, and enabling semantic querying across workflows.",
