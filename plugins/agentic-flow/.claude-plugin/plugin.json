@@ -1,26 +1,9 @@
 {
   "name": "agentic-flow",
+  "description": "Agentic flow plugin for generating FRS, feature specs, and implementing features.",
   "version": "1.1.0",
-  "description": "Agentic flow plugin for generating frs, feat spec and implementing feature.",
   "author": {
     "name": "Bikendra Thapaliya",
-    "email": "thapaliyabikendra@gmail.com",
-    "url": "https://github.com/thapaliyabikendra"
-  },
-  "homepage": "https://github.com/thapaliyabikendra/agentic-dev-flow",
-  "repository": "https://github.com/thapaliyabikendra/agentic-dev-flow",
-  "license": "MIT",
-  "category": "productivity",
-  "keywords": [
-    "claude-code",
-    "claude-code-plugin",
-    "agentic",
-    "wiki",
-    "knowledge-base",
-    "documentation",
-    "memory",
-    "semantic-search",
-    "sdlc",
-    "ai-assistant"
-  ]
+    "email": "thapaliyabikendra@gmail.com"
+  }
 }
