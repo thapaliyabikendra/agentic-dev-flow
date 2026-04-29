@@ -97,7 +97,7 @@ From `gitlab-frs-conventions.md`, extract five constants:
 
 > **Substitution rule.** When dispatching the milestone-create syncer call (Phase 3d), substitute the placeholders in `policy.milestone_description_template` with the module's actual values: replace `<Module Name>` with the confirmed module name and `[MODULE-INITIALS]` with the assigned uppercase initials (Phase 3a). The orchestrator performs this substitution before passing the rendered string in the syncer payload's `description` field — the syncer never sees a templated string.
 
-Store these as the `policy` object. From this point forward, every write-mode syncer dispatch carries the `policy` field in its payload. The syncer applies it (cheap) instead of loading the full conventions file (expensive).
+Store these as the `policy` object. From this point forward, every issue-write syncer dispatch (`create-issue`, `update-issue`) carries the `policy` field in its payload. The syncer applies it (cheap) instead of loading the full conventions file (expensive).
 
 From the resolved glossary and cross-cutting-concerns files, capture the version numbers (from each file's Revision History). Store as `glossary_version` and `baseline_version` — the variable names are preserved for backward compatibility with prior validation logs. These are written into every Validation Log's audit reproducibility set (Phase 4c.ii) so a later auditor can reconstruct exactly which contracts the FRS was generated against.
 
@@ -431,12 +431,23 @@ AskUserQuestion(questions=[{
     { label: "Move module",       description: "Move this operation to a different module; you'll name the target next." },
     { label: "Split FRS",          description: "Split into multiple FRS; you'll describe the split next." },
     { label: "Skip this FRS",      description: "Skip in this run; no GitLab issue is created for it." },
-    { label: "Sync + flag",         description: "Sync as-is and apply a label flagging it for manual cleanup in GitLab." }
+    { label: "Halt + Resume",      description: "Halt the run and emit a Resume Block with the unresolved validation findings." }
   ]
 }])
 ```
 
+An FRS with unresolved `F` validation entries MUST NOT enter `create-issue` or `update-issue`. After the refinement cap, the only allowed outcomes are moving the operation to a different module, splitting it into multiple FRS, skipping it for this run, or halting with a Resume Block that includes the validation blockers and next action.
+
+Act on the choice before 4c.iv:
+
+- **Move module** → ask for the target module using `AskUserQuestion`. Offer unprocessed confirmed modules first. If the target is a new module, run the required Phase 3 initials/collision and milestone steps before it enters Phase 4. Remove the failed FRS from the current module queue, allocate a fresh non-colliding FRS ID under the target module initials, append the operation to the target module's pending queue, update the manifest/module assignment, and continue with the current module's next FRS. If the user selects an already-processed module, halt with a Resume Block unless the run explicitly re-enters that module's Phase 4 loop. The failed body is not synced.
+- **Split FRS** → ask for the split boundary using `AskUserQuestion` with 2-3 plausible split options plus the harness-provided "Other" path. Replace the failed FRS with multiple queued FRS outlines in the current module, allocate fresh non-colliding FRS IDs, update the manifest, and return to 4c.i for the first split FRS. The failed body is not synced.
+- **Skip this FRS** → mark the FRS as skipped in the compact module summary and continue with the next FRS. No GitLab issue is created.
+- **Halt + Resume** → halt immediately and emit a Resume Block that includes the unresolved validation findings, current module, current FRS ID, and the selected next action.
+
 #### 4c.iv — Sync to GitLab
+
+**Precondition:** `validation_logs[<FRS-ID>]` contains no unresolved `F` entries. If the 4c.iii cap gate redirected this FRS (move / split / skip / halt), 4c.iv is never entered for it.
 
 Dispatch `gitlab-frs-syncer` with mode `create-issue`. Payload shape:
 
@@ -447,7 +458,7 @@ Dispatch `gitlab-frs-syncer` with mode `create-issue`. Payload shape:
   body: <full FRS markdown>,
   milestone_id: <int>,
   labels: <subset of policy.approved_labels — apply policy.default_labels plus any conditional labels>,
-  policy: <the Phase 0e object — same one used at 3d>
+  policy: <the Phase 0e object — milestone creation used only its rendered milestone_description_template>
 }
 ```
 
@@ -510,12 +521,12 @@ AskUserQuestion(questions=[{
 Behaviour per option:
 
 - **No** → proceed to 4d.1.
-- **Show one FRS body inline** → second `AskUserQuestion` with up to 4 FRS-IDs as options (use the module's FRS list; if >4 FRS, take the first 3 plus an "Other (next message)" option). Render the chosen FRS body inline by reading from the orchestrator's per-FRS draft cache (it's still in working memory at this phase). After rendering, re-present 4d.0 — the user can spot-check another, view logs, or proceed.
+- **Show one FRS body inline** → second `AskUserQuestion` with up to 4 FRS-ID options. If the module has more than 4 FRS, choose the 4 most relevant candidates from the module summary; the harness-provided "Other" path lets the user name any remaining FRS-ID in the next message. Render the chosen FRS body inline by reading from the orchestrator's per-FRS draft cache (it's still in working memory at this phase). After rendering, re-present 4d.0 — the user can spot-check another, view logs, or proceed.
 - **Show validation logs** → render `validation_logs[<every FRS-ID in module>]` as one consolidated block. These are compact (typically 6-20 lines per FRS) and stay well within Move 1 boundaries. After rendering, re-present 4d.0.
 
 **Cap on inline body renderings:** at most **3 inline FRS body renderings per module-cycle** (counter resets if 4e revisions trigger a new 4d cycle). Once the cap is hit, the **Show one FRS body inline** option is removed from the gate; the user sees only "No" and "Show validation logs". This keeps the loop bounded and protects Move 1 from drift.
 
-**Single-FRS-module shortcut.** When the module contains exactly one FRS, the spot-check gate and the disposition gate collapse — *Show one FRS body inline* and *Show validation logs* both apply to the same FRS, and "approve THE FRS" is the same decision as "approve the module". Compress to one `AskUserQuestion` call combining both gates:
+**Single-FRS-module shortcut.** When the module contains exactly one FRS, the spot-check gate and the disposition gate collapse — body/log inspection and "approve THE FRS" all apply to the same FRS. Compress to one disposition `AskUserQuestion` call, using a follow-up inspect gate only when the user asks for visibility:
 
 ```
 AskUserQuestion(questions=[{
@@ -524,14 +535,29 @@ AskUserQuestion(questions=[{
   multiSelect: false,
   options: [
     { label: "Approve",            description: "Approve the module; proceed to inter-module checkpoint." },
-    { label: "Show body inline",   description: "Render the FRS body inline (counts toward the 3-per-module-cycle cap), then re-present this gate." },
-    { label: "Show validation log",description: "Render the FRS's compact validation log, then re-present this gate." },
+    { label: "Inspect FRS",        description: "Choose body or validation log visibility before deciding disposition." },
+    { label: "Revise FRS",         description: "Revise FRS-{ID}; you'll choose the required change next." },
     { label: "Halt + Resume",      description: "Halt the run and emit a Resume Block so a fresh session can continue." }
   ]
 }])
 ```
 
-If the user picks "Show body inline" or "Show validation log", render and re-present this same gate (counting body renderings against the per-module cap above). The 4d.1 disposition gate is then skipped for this module — the combined gate already disposed it. For modules with ≥2 FRS, run 4d.0 and 4d.1 separately as defined above.
+If the user picks "Inspect FRS", call:
+
+```
+AskUserQuestion(questions=[{
+  question: "What would you like to inspect for FRS-{ID}?",
+  header: "Inspect",
+  multiSelect: false,
+  options: [
+    { label: "Show body",           description: "Render the FRS body inline; counts toward the 3-per-module-cycle cap." },
+    { label: "Show log",            description: "Render the FRS's compact validation log." },
+    { label: "Back",                description: "Return to the disposition gate without rendering anything." }
+  ]
+}])
+```
+
+If the user picks "Show body" or "Show log", render the requested content and re-present the disposition gate (counting body renderings against the per-module cap above). If the user picks "Revise FRS", route directly to Phase 4e with FRS-{ID} preselected; do not ask which FRS to revise. After Phase 4e completes without halt, re-present this combined disposition gate. The 4d.1 disposition gate is skipped for this module — the combined gate already disposed it. For modules with ≥2 FRS, run 4d.0 and 4d.1 separately as defined above.
 
 Bias: **bodies render only when explicitly requested**. Logs are a much cheaper substitute for "did the validator do its job?" — promote them.
 
@@ -575,7 +601,11 @@ AskUserQuestion(questions=[{
 
 (The harness automatically adds an "Other" choice — when the user picks it, prompt for free-text in the next message and apply that change.)
 
-Apply the change inline (the body is in context from 4c). Re-run 4c.ii and 4c.iii on the modified body — this REPLACES the prior `validation_logs[<FRS-ID>]` entry; the audit trail for revisions lives in Section 23 of the FRS body, not in the log. Dispatch `gitlab-frs-syncer` with mode `update-issue`, payload = `{ issue_id, body, labels?, policy }` — `policy` carried forward from Phase 0e exactly as in the create-issue dispatch. Update the compact summary record.
+Apply the change inline (the body is in context from 4c). Re-run 4c.ii and 4c.iii on the modified body — this REPLACES the prior `validation_logs[<FRS-ID>]` entry; the audit trail for revisions lives in Section 23 of the FRS body, not in the log.
+
+Only dispatch `gitlab-frs-syncer` with mode `update-issue` once the freshly produced validation log (from re-running 4c.ii and 4c.iii on the revised body) has no unresolved `F` entries. Payload = `{ issue_id, body, labels?, policy }` — `policy` carried forward from Phase 0e exactly as in the create-issue dispatch. Update the compact summary record after the syncer returns.
+
+If unresolved `F` entries remain after the revision attempt, do NOT dispatch `update-issue`. If revision-round budget remains, keep the revised draft in working memory and re-present the revision change gate for the same FRS. If the cap below has been reached, present the cap gate; any Resume Block must identify the last successfully synced issue body separately from the unsynced draft and its validation blockers.
 
 After all flagged revisions, re-present 4d's summary gate (4d.0 spot-check sub-gate is offered again — the user may want to spot-check the revisions).
 
@@ -587,7 +617,7 @@ AskUserQuestion(questions=[{
   header: "Cap",
   multiSelect: false,
   options: [
-    { label: "Accept current",   description: "Approve the module in its current revised state; proceed to Phase 5." },
+    { label: "Accept current",   description: "Approve the latest successfully synced valid state; discard any unsynced invalid draft; proceed to Phase 5." },
     { label: "Skip the module",  description: "Drop this module from this run; Resume Block records what was synced." },
     { label: "Halt for review",  description: "Halt the run and emit a Resume Block so you can investigate offline." }
   ]

@@ -6,7 +6,7 @@
 
 Naming, labelling, and formatting rules for GitLab milestones and issues created during FRS work. Version-controlled here so they don't drift across runs or live in `CLAUDE.md` (which stays lean).
 
-**Read contract.** The `generate-frs` orchestrator reads this file ONCE at Phase 0e and extracts a `policy` object (approved_labels, default_labels, frs_id_pattern, milestone_description_template, conditional_label_rules). That `policy` is included in every write-mode `gitlab-frs-syncer` dispatch payload — the syncer trusts it and does NOT re-read this file. `review-frs` reads this directly at audit start. `CLAUDE.md` should not duplicate any value here.
+**Read contract.** The `generate-frs` orchestrator reads this file ONCE at Phase 0e and extracts a `policy` object (approved_labels, default_labels, frs_id_pattern, milestone_description_template, conditional_label_rules). That `policy` is included in every issue-write `gitlab-frs-syncer` dispatch payload (`create-issue`, `update-issue`) — the syncer trusts it and does NOT re-read this file. `create-milestone` receives a pre-rendered description and no `policy`. `review-frs` reads this directly at audit start. `CLAUDE.md` should not duplicate any value here.
 
 ---
 
@@ -113,7 +113,7 @@ Never apply labels outside the approved list, even when the orchestrator's paylo
 
 ## Policy Object Built at Phase 0e
 
-The orchestrator extracts this object from this file at Phase 0e and carries it through every write-mode syncer dispatch:
+The orchestrator extracts this object from this file at Phase 0e and carries it through every issue-write syncer dispatch (`create-issue`, `update-issue`):
 
 ```
 policy: {
