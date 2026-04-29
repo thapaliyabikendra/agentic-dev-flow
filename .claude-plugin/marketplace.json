@@ -7,32 +7,33 @@
   },
   "metadata": {
     "description": "Agentic development workflow plugins for intelligent task planning, dependency mapping, and knowledge management.",
-    "version": "1.1.0"
+    "version": "1.1.0",
+    "pluginRoot": "./"
   },
   "plugins": [
     {
       "name": "agentic-dev-flow",
       "source": "./plugins/agentic-dev-flow",
       "description": "Core agentic workflow plugin for intelligent task planning, breakdown, and orchestration using sub-agents.",
-      "version": "1.0.0",
       "category": "productivity",
-      "keywords": ["agentic", "task-planning", "project-management", "developer-tools", "productivity", "ai-assistant"]
+      "tags": ["agentic", "task-planning", "project-management", "developer-tools", "productivity", "ai-assistant"],
+      "author": { "name": "Bikendra Thapaliya" }
     },
     {
       "name": "agentic-wiki",
       "source": "./plugins/wiki",
       "description": "Knowledge system plugin for ingesting data, synthesizing structured knowledge, and enabling semantic querying across workflows.",
-      "version": "1.0.0",
       "category": "productivity",
-      "keywords": ["agentic", "wiki", "knowledge-base", "documentation", "memory", "semantic-search", "sdlc", "ai-assistant"]
+      "tags": ["agentic", "wiki", "knowledge-base", "documentation", "memory", "semantic-search", "sdlc", "ai-assistant"],
+      "author": { "name": "Bikendra Thapaliya" }
     },
     {
       "name": "agentic-flow",
       "source": "./plugins/agentic-flow",
       "description": "Agentic flow plugin for generating FRS, feature specs, and implementing features.",
-      "version": "1.1.0",
       "category": "productivity",
-      "keywords": ["claude-code", "claude-code-plugin", "agentic", "frs", "feature-spec", "sdlc", "ai-assistant"]
+      "tags": ["claude-code", "claude-code-plugin", "agentic", "frs", "feature-spec", "sdlc", "ai-assistant"],
+      "author": { "name": "Bikendra Thapaliya" }
     }
   ]
 }
