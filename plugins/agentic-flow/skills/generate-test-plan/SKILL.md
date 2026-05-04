@@ -1,11 +1,11 @@
 ---
 name: generate-test-plan
-description: "Use when generating a test plan from an FRS document or raw application code — NOT from user stories. Parses the source, extracts testable use cases grouped by category, and creates TC files in the sibling wiki/docs repo at ../docs/test-plans/{feature}/{use-case}/{feature}-TC-NNN.md. FRS input produces placeholder selectors; raw-code input extracts selectors from the code."
+description: "Use when generating a test plan from an FRS document or raw application code — NOT from user stories. Parses the source, extracts testable use cases grouped by category, and creates TC files in the docs/wiki repo at {docs_repo}/test-plans/{feature}/{use-case}/{feature}-TC-NNN.md. The skill auto-discovers the docs/wiki repo (sibling lookup, then grandparent lookup, then asks). FRS input produces placeholder selectors; raw-code input extracts selectors from the code."
 ---
 
 # Generate Test Plan from Source (FRS / Raw Code)
 
-Parses a Functional Requirements Specification (FRS) document **or** raw application source code, extracts testable use cases, and emits individual TC files into the **sibling docs/wiki repo** under `../docs/test-plans/{feature}/{use-case}/`. Each use case category (display, add, edit, delete, etc.) gets its own sub-folder. Each TC within a sub-folder covers one flow variant — happy path, validation, edge case, etc.
+Parses a Functional Requirements Specification (FRS) document **or** raw application source code, extracts testable use cases, and emits individual TC files into the **docs/wiki repo** under `{docs_repo}/test-plans/{feature}/{use-case}/`. Each use case category (display, add, edit, delete, etc.) gets its own sub-folder. Each TC within a sub-folder covers one flow variant — happy path, validation, edge case, etc.
 
 | Input type | Selector behaviour |
 |---|---|
@@ -16,11 +16,15 @@ Parses a Functional Requirements Specification (FRS) document **or** raw applica
 Do NOT invent selectors when the input is an FRS. Every step selector MUST be `(discovered by explorer)` or `n/a` (for pure-navigation steps). This applies to EVERY TC regardless of how obvious the UI element seems.
 </HARD-GATE>
 
+<HARD-GATE>
+Do NOT write TC files inside the UI or API repo. Resolve the docs/wiki repo path via the discovery cascade in Step 1. If the cascade fails, STOP and ask the user — never silently fall back to a `./docs/` folder inside the current repo.
+</HARD-GATE>
+
 ---
 
 ## Workspace Layout Assumption
 
-This skill assumes a multi-repo workspace where the docs/wiki repo is a **sibling** of the UI and API repos:
+This skill assumes a multi-repo workspace where the docs/wiki repo lives **alongside** the UI and API repos — typically as a sibling, sometimes one level higher:
 
 ```
 workspace/
@@ -29,14 +33,27 @@ workspace/
   docs/      ← wiki / knowledge repo (TC files land here)
 ```
 
-All TC paths in this skill are written **relative to the repo the skill is invoked from**, using `../docs/test-plans/...`. If the workspace layout differs, ask the user for the correct path to the docs/wiki repo before emitting any files.
+Or a nested layout where the docs repo sits at the workspace root:
+
+```
+workspace/
+  frontend/
+    ui/      ← skill may be run from here
+  backend/
+    api/     ← skill may be run from here
+  wiki/      ← docs repo lives here
+```
+
+Common names for the docs/wiki repo: `docs`, `wiki`, `knowledge`, `kb`, `documentation`. The skill discovers the path automatically (Step 1) and asks the user when discovery is ambiguous or fails.
+
+Throughout this skill, the resolved path is referred to as `{docs_repo}`. All TC paths take the form `{docs_repo}/test-plans/{feature}/{use-case}/{feature}-TC-{NNN}.md`.
 
 ---
 
 ## Directory Structure
 
 ```
-../docs/test-plans/
+{docs_repo}/test-plans/
   {feature}/
     {use-case-a}/
       {feature}-TC-001.md     ← happy path
@@ -49,7 +66,7 @@ All TC paths in this skill are written **relative to the repo the skill is invok
 
 **Concrete example:**
 ```
-../docs/test-plans/
+{docs_repo}/test-plans/
   checklist/
     display/
       checklist-TC-001.md     ← Display items (Happy Path)
@@ -123,7 +140,7 @@ All TC paths in this skill are written **relative to the repo the skill is invok
 
 ## Overview
 
-Use this skill when the user provides an FRS document (`.md`, `.docx`, `.pdf`, or pasted text) or source code files / a directory and asks for a test plan. The skill produces individual TC files in the **sibling docs/wiki repo**, organized by feature and use case category.
+Use this skill when the user provides an FRS document (`.md`, `.docx`, `.pdf`, or pasted text) or source code files / a directory and asks for a test plan. The skill produces individual TC files in the **docs/wiki repo**, organized by feature and use case category.
 
 **Core principle:** One flow variant = one TC file. One use case category = one sub-folder. Never mix unrelated actions in a single TC.
 
@@ -132,6 +149,12 @@ Use this skill when the user provides an FRS document (`.md`, `.docx`, `.pdf`, o
 ## Anti-Pattern: "I Can Guess the Selector"
 
 When reading an FRS that says *"User clicks the Save button"*, it is tempting to emit `` `[data-testid="btn-save"]` `` because it seems obvious. Don't. The FRS describes behaviour, not markup. Guessed selectors cause silent test failures. Leave them as `(discovered by explorer)` and let the explorer skill resolve them against the real DOM.
+
+---
+
+## Anti-Pattern: "I'll Just Write Files Wherever"
+
+When the docs/wiki repo isn't immediately at `../docs/`, it is tempting to fall back to a `./docs/` folder inside the current UI or API repo, or to write into the user's home directory. Don't. TC files belong in the docs/wiki repo, full stop. Run the discovery cascade in Step 1 and, if it fails, ask the user. Writing TC files into the wrong repo pollutes source control and breaks the explorer skill's downstream reads.
 
 ---
 
@@ -153,7 +176,7 @@ When reading an FRS that says *"User clicks the Save button"*, it is tempting to
 
 You MUST complete these in order:
 
-1. **Verify workspace layout** — confirm `../docs/` exists as the sibling docs/wiki repo
+1. **Locate the docs/wiki repo** — run the discovery cascade (sibling → grandparent → ask) and record `{docs_repo}`
 2. **Classify input** — determine FRS, raw code, or mixed
 3. **Identify feature name** — derive the kebab-case feature name
 4. **Extract testable requirements** — parse the source into a requirements list
@@ -161,8 +184,8 @@ You MUST complete these in order:
 6. **Group into TCs per category** — one TC per flow variant within each category
 7. **Derive steps per TC** — write Step / Selector / Expected Result rows
 8. **Resolve selectors (code input only)** — scan source for `data-testid`, `id`, `name`, `aria-label`
-9. **Emit TC files** — create each file under the correct sub-folder in `../docs/test-plans/`
-10. **Print summary** — show a table grouped by use case
+9. **Emit TC files** — create each file under the correct sub-folder in `{docs_repo}/test-plans/`
+10. **Print summary** — show a table grouped by use case, including any skipped files
 
 ---
 
@@ -172,7 +195,7 @@ You MUST complete these in order:
 digraph process {
     rankdir=TB;
 
-    verify_ws [label="Verify ../docs/\nsibling repo exists" shape=diamond];
+    locate [label="Locate docs/wiki repo\n(sibling → grandparent → ask)" shape=diamond];
     classify [label="Classify input\n(FRS / code / mixed)" shape=diamond];
     extract_frs [label="Extract requirements\nfrom FRS" shape=box];
     extract_code [label="Extract requirements\n+ selectors from code" shape=box];
@@ -182,10 +205,10 @@ digraph process {
     steps [label="Derive steps\nper TC" shape=box];
     selectors [label="Resolve selectors\nfrom code" shape=box];
     skip_sel [label="All selectors =\n(discovered by explorer)" shape=box];
-    emit [label="Emit TC files under\n../docs/test-plans/{feature}/{use-case}/" shape=box];
-    summary [label="Print summary table" shape=doublecircle];
+    emit [label="Emit TC files under\n{docs_repo}/test-plans/{feature}/{use-case}/" shape=box];
+    summary [label="Print summary table\n(created + skipped)" shape=doublecircle];
 
-    verify_ws -> classify;
+    locate -> classify;
     classify -> extract_frs [label="FRS"];
     classify -> extract_code [label="code"];
     classify -> extract_mixed [label="mixed"];
@@ -206,13 +229,36 @@ digraph process {
 
 ## The Process
 
-### Step 1: Verify Workspace Layout
+### Step 1: Locate the Docs/Wiki Repo
 
-- Confirm that `../docs/` exists relative to the current working directory and is the docs/wiki repo.
-- If the layout differs (e.g. docs repo is at a different path, or the user runs from the workspace root), **ask the user for the correct path** before continuing.
-- Record the resolved base path (default: `../docs/test-plans/`) and use it for all subsequent file operations.
-- **Verify:** The base path is writable and the directory exists or can be created.
-- **On failure:** Stop and ask the user where the docs/wiki repo lives.
+The TC files must land in the docs/wiki repo, not inside the UI or API repo. Resolve the path in this order — stop at the first match:
+
+**1a. Check the conventional sibling path.**
+- Test `../docs/` relative to the current working directory.
+- If it exists and contains a `.git/` directory (or a `test-plans/` directory from a prior run), accept it.
+
+**1b. Scan for sibling repos with conventional names.**
+- From the parent of the current working directory, list immediate subdirectories.
+- Match any of: `docs`, `wiki`, `knowledge`, `kb`, `documentation` (case-insensitive).
+- Prefer ones that contain `.git/` (real repos) over plain folders.
+- If exactly one match: accept it. If multiple matches: list them and ask the user which one.
+
+**1c. Walk up one more level.**
+- If the current repo is nested (e.g. `workspace/frontend/ui/`), the docs repo may live at the workspace root rather than as an immediate sibling.
+- Check the grandparent directory for the same name patterns as 1b, with the same `.git/` preference and same ambiguity rule.
+
+**1d. Ask the user.**
+- If 1a–1c all fail, stop and ask:
+  > "I couldn't find a docs/wiki repo near here. Where should I write the TC files? (e.g. `../docs`, `~/work/wiki`, or an absolute path)"
+- Once the user replies, validate the path exists and is writable before proceeding.
+- Optional: if the user names a path that doesn't exist yet, confirm whether to create it before continuing.
+
+**Record the resolved base path** as `{docs_repo}`. All subsequent file operations write to `{docs_repo}/test-plans/...`.
+
+- **Verify:**
+  - `{docs_repo}` exists, is a directory, and is writable.
+  - `{docs_repo}` is **outside** the current UI/API repo — guard against silently writing into a `./docs/` folder inside the source repo. If the resolved path is inside the current repo, treat it as a discovery failure and fall through to 1d.
+- **On failure:** Do not fall back to writing inside the current repo. Stop and ask.
 
 ### Step 2: Classify Input
 
@@ -327,23 +373,28 @@ Scan source files in this priority order:
 
 For each TC:
 
-- Create directory: `../docs/test-plans/{feature}/{use-case}/` if it doesn't exist.
-- Create file: `../docs/test-plans/{feature}/{use-case}/{feature}-TC-{NNN}.md`
+- Create directory: `{docs_repo}/test-plans/{feature}/{use-case}/` if it doesn't exist.
+- Create file: `{docs_repo}/test-plans/{feature}/{use-case}/{feature}-TC-{NNN}.md`
 - TC numbers are sequential across the entire feature (not per sub-folder).
-- Before creating, check if the file already exists. If it does, skip and warn.
+- Before creating, check if the file already exists. If it does, **skip** and add it to a `skipped` list with the reason `already exists`.
 
-- **Verify:** Each file exists, format matches the TC template, all sections present (header, Steps, Preconditions, Postconditions).
+Track two counters across the entire emit phase:
+- `created`: files written this run
+- `skipped`: files that already existed (with their paths and reasons)
+
+- **Verify:** Each created file matches the TC template, with all sections present (header, Steps, Preconditions, Postconditions).
 - **On failure:** Fix the malformed TC before moving to the next.
 
 ### Step 10: Print Summary
 
-Print a grouped summary table:
+Print a grouped summary table. Always include the resolved `{docs_repo}` path so the user can confirm where the files landed, and surface any skipped files at the bottom.
 
 ```markdown
 ## Test Plan Summary: {Feature Name}
 
-**Total TCs:** {N} | **Selectors resolved:** {M}/{total}
-**Output:** `../docs/test-plans/{feature}/`
+**Total TCs:** {N}  ·  **Created:** {created}  ·  **Skipped:** {skipped_count}
+**Selectors resolved:** {M}/{total}
+**Output:** `{docs_repo}/test-plans/{feature}/`
 
 ### display/
 | TC | Title | Priority | Selectors |
@@ -362,8 +413,15 @@ Print a grouped summary table:
 |----|-------|----------|-----------|
 | TC-005 | Delete Item (Happy Path) | High | 2/4 from code |
 
-📂 ../docs/test-plans/{feature}/
+### Skipped
+| TC | Path | Reason |
+|----|------|--------|
+| TC-001 | {docs_repo}/test-plans/checklist/display/checklist-TC-001.md | already exists |
+
+📂 {docs_repo}/test-plans/{feature}/
 ```
+
+If `skipped_count` is `0`, omit the `Skipped` table entirely.
 
 ---
 
@@ -371,15 +429,15 @@ Print a grouped summary table:
 
 ### `createTC(feature, use_case, tc_number, tc_content)`
 
-Create `../docs/test-plans/{feature}/{use_case}/{feature}-TC-{NNN}.md`. Create directories if needed. Check if file exists first.
+Create `{docs_repo}/test-plans/{feature}/{use_case}/{feature}-TC-{NNN}.md`. Create directories if needed. Check if file exists first; if it does, skip and report.
 
 ### `updateSelector(feature, use_case, tc_number, step_number, selector)`
 
-Update the Selector cell of a specific step row in `../docs/test-plans/{feature}/{use_case}/{feature}-TC-{NNN}.md`. Leave all other cells untouched.
+Update the Selector cell of a specific step row in `{docs_repo}/test-plans/{feature}/{use_case}/{feature}-TC-{NNN}.md`. Leave all other cells untouched.
 
 ### `readTC(feature, use_case, tc_number)`
 
-Read and parse a single TC file from `../docs/test-plans/{feature}/{use_case}/{feature}-TC-{NNN}.md`. Return:
+Read and parse a single TC file from `{docs_repo}/test-plans/{feature}/{use_case}/{feature}-TC-{NNN}.md`. Return:
 ```json
 {
   "feature": "checklist",
@@ -397,7 +455,7 @@ Read and parse a single TC file from `../docs/test-plans/{feature}/{use_case}/{f
 
 ### `listAll(feature)`
 
-Scan `../docs/test-plans/{feature}/` recursively. Return all TCs grouped by use case sub-folder.
+Scan `{docs_repo}/test-plans/{feature}/` recursively. Return all TCs grouped by use case sub-folder.
 
 ---
 
@@ -422,7 +480,13 @@ Scan `../docs/test-plans/{feature}/` recursively. Return all TCs grouped by use 
 **✅ Only create sub-folders that contain at least one TC file.**
 
 **❌ Writing TC files inside the UI or API repo** — e.g. `ui/docs/test-plans/...` or `api/test-plans/...`.
-**✅ All TC files live in the sibling docs/wiki repo at `../docs/test-plans/{feature}/{use-case}/`.**
+**✅ All TC files live in the docs/wiki repo at `{docs_repo}/test-plans/{feature}/{use-case}/`.**
+
+**❌ Stopping discovery at `../docs/` and giving up** — skipping the sibling-name scan and grandparent walk.
+**✅ Run the full Step 1 cascade before asking the user; only ask when 1a–1c all miss.**
+
+**❌ Silently skipping files that already exist without telling the user**
+**✅ Track skipped files and report them in the Step 10 summary with paths and reasons.**
 
 **❌ Missing Preconditions or Postconditions sections**
 **✅ Every TC must have both — even if the precondition is just "User is logged in".**
@@ -434,7 +498,7 @@ Scan `../docs/test-plans/{feature}/` recursively. Return all TCs grouped by use 
 **Scenario:** User provides `BankSettingsChecklist.tsx` (with `data-testid` attributes) from the `ui/` repo and asks for a test plan. The skill is invoked from inside `ui/`.
 
 **Action taken:**
-1. Verified `../docs/` exists as the sibling wiki repo.
+1. Ran the discovery cascade. `../docs/` did not exist. Sibling scan found `../wiki/` (a git repo). Accepted `{docs_repo} = ../wiki`.
 2. Classified as `code`.
 3. Feature: `checklist`.
 4. Extracted: table rendering, add dialog, edit dialog, delete action, toggle switch, reorder buttons, empty state, validation (empty description).
@@ -444,7 +508,7 @@ Scan `../docs/test-plans/{feature}/` recursively. Return all TCs grouped by use 
 8. Created TC files:
 
 ```
-../docs/test-plans/checklist/
+../wiki/test-plans/checklist/
   display/
     checklist-TC-001.md   ← Display Items (Happy Path)
     checklist-TC-002.md   ← Display Empty State (Edge Case)
@@ -461,18 +525,19 @@ Scan `../docs/test-plans/{feature}/` recursively. Return all TCs grouped by use 
     checklist-TC-008.md   ← Reorder Items Up/Down (Happy Path)
 ```
 
-9. Summary: 8 TCs across 6 sub-folders, 22/28 selectors from code.
+9. Summary: 8 TCs across 6 sub-folders, 22/28 selectors from code, 0 skipped.
 
 ---
 
 ## Key Principles
 
-- **TC files live in the sibling docs/wiki repo** — `../docs/test-plans/...`, never inside the UI or API repo.
+- **TC files live in the docs/wiki repo** — `{docs_repo}/test-plans/...`, never inside the UI or API repo.
+- **Discovery before asking** — run the full Step 1 cascade (sibling → grandparent) before prompting the user for a path.
 - **One flow variant = one TC file** — happy path, validation, and edge case each get their own file.
 - **One use case category = one sub-folder** — all TCs for "delete" live under `delete/`.
 - **Sequential numbering across the feature** — TC-001 through TC-NNN, never resetting per sub-folder.
 - **Selector honesty** — placeholder or template notation is always better than a guess.
-- **Never overwrite** — check if TC file exists before creating; skip and warn if it does.
+- **Never overwrite, never silently skip** — check if a TC file exists before creating; if it does, skip and report it in the summary.
 - **Complete sections** — every TC must include header, Steps table, Preconditions, and Postconditions.
 
 ---
@@ -482,13 +547,14 @@ Scan `../docs/test-plans/{feature}/` recursively. Return all TCs grouped by use 
 **Never:**
 - Invent a `data-testid` that doesn't exist in the source code
 - Overwrite an existing TC file without reading it first
+- Silently skip an existing file without surfacing it in the summary
 - Combine unrelated user actions into a single TC
 - Emit more than 10 steps in a single TC — split into a new TC
 - Skip Preconditions or Postconditions — both are mandatory
 - Use positional CSS selectors
-- Write TC files outside `../docs/test-plans/{feature}/{use-case}/` (i.e. inside the UI or API repo)
+- Write TC files outside `{docs_repo}/test-plans/{feature}/{use-case}/` (i.e. inside the UI or API repo)
 - Reset TC numbering per sub-folder
-- Proceed without confirming the docs/wiki repo path if the workspace layout is unclear
+- Proceed without a confirmed `{docs_repo}` path
 
 **If the FRS is ambiguous:**
 - List the ambiguous requirements explicitly
@@ -499,14 +565,20 @@ Scan `../docs/test-plans/{feature}/` recursively. Return all TCs grouped by use 
 - Ask if the user wants API-level test plans instead
 - Do not force UI-style TCs onto non-UI code
 
-**If `../docs/` does not exist:**
-- Stop and ask the user where the docs/wiki repo lives in their workspace
+**If the discovery cascade fails:**
+- Step 1a (`../docs/`) misses, 1b (sibling scan) misses, 1c (grandparent scan) misses
+- Stop and ask the user where the docs/wiki repo lives
 - Do not silently fall back to writing inside the current repo
+- Do not pick one of multiple ambiguous matches without asking
+
+**If the discovery cascade resolves to a path inside the current repo:**
+- Treat as a failure and fall through to asking the user
+- Writing TC files into the source repo pollutes the UI/API codebase
 
 ---
 
 ## Integration
 
-**Required before:** Input files must be accessible (uploaded or path provided). The sibling `../docs/` repo must exist and be writable.
+**Required before:** Input files must be accessible (uploaded or path provided). The docs/wiki repo must exist somewhere reachable by the discovery cascade — or the user must be available to provide the path.
 **Required after:** Explorer skill for resolving `(discovered by explorer)` selectors against live DOM.
 **Alternative workflow:** `skill:generate-test-plan-from-stories` — when input is user stories instead of FRS/code.

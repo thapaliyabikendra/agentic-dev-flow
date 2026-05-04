@@ -9,7 +9,7 @@ model: "haiku"
 
 # Implement Feature — Repo-Aware ABP Code Generation
 
-**Announce at start:** "I'm using the implement-feat skill. I'll scan your repo first, reconcile the Feat Spec against what already exists (REUSE / UPDATE / CREATE), gate on your approval, plan the artifacts with quality pre-flight, gate again, then synthesize. Migrations stay manual."
+**Announce at start:** "I'm using the implement-feat skill. I'll scan your repo first, reconcile the Feat Spec against what already exists (REUSE / UPDATE / CREATE), gate on your approval, plan the artifacts with quality pre-flight, gate again, cut a `feat/<slug>` branch from `develop`, then synthesize. Migrations and commits stay manual."
 
 <HARD-GATE>
 
@@ -32,12 +32,19 @@ model: "haiku"
 - `CREATE_NEW` paths must not exist on disk at synthesis time. Drift between plan and synth halts with `FILE_DRIFT`.
 - No file is overwritten without an explicit `UPDATE_IN_PLACE` decision.
 
+**Branch discipline:**
+- Synthesis runs on a feature branch, never on `develop` / `main` / `master`. Default branch name: `feat/<feature-slug>` from `develop`. Both are overridable via `AskUserQuestion` and via CLAUDE.md (`branch_naming_pattern`, `default_base_branch`).
+- Working tree must be clean before the branch is cut — dirty tree halts with `WORKING_TREE_DIRTY`.
+- Source branch must exist locally — missing branch halts with `BASE_BRANCH_MISSING`.
+- The skill never runs `git commit`, `git push`, `git pull`, `git fetch`, `git merge`, `git rebase`, or any rewrite of history. It creates the branch, checks it out, and writes files. Commits remain the user's manual step.
+
 **Architecture:**
 - No Controller / ControllerBase / `[ApiController]` classes. AppService methods + `[RemoteService]` + `[Authorize]` are the HTTP entry point.
 - No domain events published from the Domain layer. Cross-aggregate orchestration goes through a DomainService; deliberate cross-module reactions go through an EventHandler in Application.
 - No `ILocalEventBus.PublishAsync` for cross-aggregate writes.
 - No user-visible strings inlined — `IStringLocalizer<<Feature>Resource>` keys only.
 - No `dotnet ef migrations add` or `dotnet ef database update`. Migrations are the user's manual step.
+- No `git commit`, `git push`, `git pull`, `git fetch`, `git merge`, or `git rebase`. Commits are the user's manual step.
 
 **Quality gates (1–10):** see `references/code-quality.md`. Gate 1 (no controllers) is an abort condition; gates 2–10 halt synthesis pending user revision or explicit override.
 
@@ -69,7 +76,7 @@ Outcomes: bidirectional traceability, manual migrations, two strict approval gat
 | 3 | **Reconciliation approval gate** | main (`AskUserQuestion`) | — | `approve` / `revise` / `cancel` |
 | 4 | Artifact planning + traceability + quality pre-flight | `planner` | Yes (per layer) | Forward & backward coverage; pair integrity; quality pre-flight |
 | 5 | **Artifact plan approval gate** | main (`AskUserQuestion`) | — | Diffs + quality checklist visible; `approve` / `revise` / `cancel` |
-| 6 | Synthesis + post-write quality scan | `synthesizer` | Yes (per cohort, per file within cohort) | Halt on quality violation; controller-detection aborts |
+| 6 | Branch setup + Synthesis + post-write quality scan | main (branch) → `synthesizer` | Yes (per cohort, per file within cohort) | Halt on dirty tree, missing base branch, existing branch (user-resolved); halt on quality violation; controller-detection aborts |
 | 7 | Build + repair loop | `build-validator` (+ `synthesizer:repair`) | No | `dotnet build` green; cap 3 repair iterations |
 | 8 | Final report | main | — | `IMPLEMENTATION_REPORT_<Feature>.md` written |
 
@@ -135,7 +142,24 @@ Preview includes: new files (path + summary + FS source), unified diffs per `upd
 
 `AskUserQuestion`: `approve` / `revise` / `cancel`.
 
-### Phase 6 — Synthesis
+### Phase 6 — Branch setup + Synthesis
+
+**6a. Branch setup (main agent, before any file write):**
+
+1. Run `git status --porcelain`. Non-empty → halt `WORKING_TREE_DIRTY`. The user must commit or stash before re-running.
+2. Compute the proposed branch name from `branch_naming_pattern` (default `feat/<feature-slug>`) and the proposed base from `default_base_branch` (default `develop`).
+3. Verify the base branch exists locally: `git rev-parse --verify <base>`. Missing → halt `BASE_BRANCH_MISSING` with hint to `git fetch` it manually (network is forbidden inside the skill).
+4. Check whether the proposed branch already exists locally: `git rev-parse --verify <branch>`. If it exists → `AskUserQuestion`: `checkout existing` / `pick a different name` / `cancel`.
+5. `AskUserQuestion` to confirm: `use feat/<slug> from develop` / `customize branch or base` / `stay on current branch (advanced)` / `cancel`.
+   - `use ...` → `git checkout <base> && git checkout -b <branch>`.
+   - `customize ...` → collect new branch name and base via follow-up `AskUserQuestion`, then create.
+   - `stay on current branch` → log the chosen ref; flag in the final report as `branch_setup: skipped`. Only available when the current ref is not `develop` / `main` / `master`.
+   - `cancel` → exit `USER_CANCELLED`, no I/O.
+6. Record the branch name, base branch, and base commit SHA for the final report.
+
+No commits are made by the skill. After build is green (Phase 7) the user reviews and commits manually.
+
+**6b. Synthesis:**
 
 `synthesizer` runs cohort A → B → C → D serially; files within a cohort run in parallel.
 
@@ -198,9 +222,11 @@ See `templates/implementation-report-template.md`.
 | `str_replace` | 6 | `synthesizer` |
 | `dotnet sln list` | 1 | `repo-scout` |
 | `dotnet build` | 7 | `build-validator` only |
-| `AskUserQuestion` | 0, 2, 3, 5, 6 | main only |
+| `git status` / `git rev-parse` / `git branch` (read) | 6a | main only |
+| `git checkout`, `git checkout -b` | 6a | main only (after Phase 5 approval) |
+| `AskUserQuestion` | 0, 2, 3, 5, 6, 6a | main only |
 
-**Forbidden everywhere:** `dotnet ef *`, `dotnet run`, `dotnet test`, `dotnet add`, `dotnet publish`, network, wiki write, GitLab write, full-file overwrite of non-empty existing files.
+**Forbidden everywhere:** `dotnet ef *`, `dotnet run`, `dotnet test`, `dotnet add`, `dotnet publish`, network, wiki write, GitLab write, full-file overwrite of non-empty existing files, `git commit`, `git push`, `git pull`, `git fetch`, `git merge`, `git rebase`, `git reset --hard`, `git stash`, any history-rewriting git command.
 
 ---
 
@@ -232,6 +258,8 @@ See `templates/implementation-report-template.md`.
 | `notable_gotchas` | no | — | passed to synthesizer as context |
 | `exception_handling_strategy` | no | `try-catch-translate` | enforced by gate 3 |
 | `logging_level` | no | `Information` | enforced by gate 10 |
+| `default_base_branch` | no | `develop` | source branch for `feat/*` cuts in Phase 6a |
+| `branch_naming_pattern` | no | `feat/<feature-slug>` | target branch name in Phase 6a; `<feature-slug>` token is substituted |
 
 Missing required → halt at Phase 0. Missing optional → one-line soft warning listing the default used.
 
@@ -259,6 +287,8 @@ Missing required → halt at Phase 0. Missing optional → one-line soft warning
 | `AUXILIARY_PROJECT_MISSING` | Reconciler raises; user decides at Phase 3 |
 | `USER_REVISION_REQUESTED` | Re-run affected phase |
 | `USER_CANCELLED` | No side effects |
+| `WORKING_TREE_DIRTY` | Phase 6a halt; user commits or stashes |
+| `BASE_BRANCH_MISSING` | Phase 6a halt; user fetches the base branch manually |
 | `CONTROLLER_DETECTED` | Phase 6 abort |
 | `QUALITY_VIOLATION` | Phase 6 halt; user decides at re-prompt |
 | `FILE_DRIFT` | Phase 6 halt; re-plan |
@@ -269,13 +299,14 @@ Missing required → halt at Phase 0. Missing optional → one-line soft warning
 ## Expected output
 
 - Two approved gates (reconciliation + artifact plan).
+- A fresh `feat/<feature-slug>` branch (or user-customized name) checked out from `develop`, holding all synthesized changes.
 - New C# files + in-place edits realizing the feature.
 - All synthesized code passes the 10 quality gates.
 - `dotnet build` green.
-- `IMPLEMENTATION_REPORT_<Feature>.md` with full REUSE / UPDATE / CREATE inventory + quality coverage.
+- `IMPLEMENTATION_REPORT_<Feature>.md` with full REUSE / UPDATE / CREATE inventory + quality coverage + branch metadata (name, base, base SHA).
 - 100% bidirectional traceability.
-- No migrations run.
+- No migrations run. No commits made.
 
 ## Next step
 
-After completion: review the quality coverage report, run the migration commands the report lists, seed permission grants, write tests, commit. Then return to `generate-feat-spec` for the next milestone.
+After completion: review the quality coverage report, run the migration commands the report lists, seed permission grants, write tests, then `git add` / `git commit` / `git push` the feature branch and open the MR. Then return to `generate-feat-spec` for the next milestone.
